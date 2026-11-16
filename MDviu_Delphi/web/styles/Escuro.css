@@ -1,0 +1,197 @@
+/* =========================================================================
+   MDviu — folha de estilo "Escuro"
+   Mesmo espacamento do "Espacoso" (confortavel de ler), so troca as cores
+   para um fundo escuro.
+   ========================================================================= */
+
+/* -------------------------------------------------------------------------
+   1. BASE — fonte, cor de fundo, cor de texto da pagina inteira
+   ------------------------------------------------------------------------- */
+body {
+    background-color: #1e1e1e;
+    color: #d8d8d8;
+    font-family: "Segoe UI", Calibri, Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.6;           /* usado tambem no calculo de espaco da <hr>, ver secao 9 */
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2.5em 2em;
+}
+
+/* Sem isso, a margem de cima do primeiro elemento (normalmente o h1) soma
+   com o padding do body acima — ficando um espaco grande demais no topo. */
+#content > *:first-child {
+    margin-top: 0;
+}
+
+#dropzone-msg {
+    text-align: center;
+    color: #888888;
+    font-size: 1.1em;
+    margin-top: 4em;
+    border: 2px dashed #555555;
+    border-radius: 8px;
+    padding: 3em 1em;
+}
+
+/* -------------------------------------------------------------------------
+   2. TITULOS (headers) — h1 a h6
+   ------------------------------------------------------------------------- */
+h1 {
+    font-size: 2.1em;
+    margin: 1.2em 0 0.6em 0;
+    border-bottom: 2px solid #d8d8d8;
+    padding-bottom: 0.2em;
+}
+
+h2 {
+    font-size: 1.7em;
+    margin: 1.2em 0 0.5em 0;
+    border-bottom: 1px solid #444444;
+    padding-bottom: 0.15em;
+}
+
+h3 {
+    font-size: 1.4em;
+    margin: 1.1em 0 0.4em 0;
+}
+
+h4 {
+    font-size: 1.2em;
+    margin: 1em 0 0.4em 0;
+}
+
+h5 {
+    font-size: 1.05em;
+    margin: 1em 0 0.3em 0;
+    font-weight: bold;
+}
+
+h6 {
+    font-size: 0.95em;
+    margin: 1em 0 0.3em 0;
+    font-weight: bold;
+    color: #a0a0a0;
+}
+
+/* -------------------------------------------------------------------------
+   3. PARAGRAFOS — espaco entre blocos de texto (como "pular uma linha")
+   ------------------------------------------------------------------------- */
+p {
+    margin: 0 0 1.4em 0;    /* aumente este numero (em "em") para mais espaco entre paragrafos */
+}
+
+/* -------------------------------------------------------------------------
+   4. LINKS — internos (ex.: #secao, arquivo relativo) e externos (http/https)
+   ------------------------------------------------------------------------- */
+a.internal-link {
+    color: #6cb6ff;
+    text-decoration: underline;
+}
+
+a.external-link {
+    color: #6bdf9a;
+    text-decoration: underline;
+}
+
+a.external-link::after {
+    content: " \2197";
+    font-size: 0.8em;
+}
+
+a:hover {
+    opacity: 0.75;
+}
+
+/* -------------------------------------------------------------------------
+   5. IMAGENS
+   ------------------------------------------------------------------------- */
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1em auto;
+    border-radius: 4px;
+}
+
+/* -------------------------------------------------------------------------
+   6. TABELAS — bordas finas em tudo, pouco padding (prioriza leitura)
+   ------------------------------------------------------------------------- */
+table {
+    border-collapse: collapse;   /* importante: sem isso as bordas duplicam e ficam grossas */
+    width: 100%;
+    margin: 1.5em 0;
+    font-size: 0.95em;
+}
+
+th,
+td {
+    border: 1px solid #555555;   /* preto puro nao combina com fundo escuro — usa cinza claro */
+    padding: 0.35em 0.6em;       /* ajuste aqui para mais/menos respiro dentro da celula */
+    text-align: left;
+}
+
+th {
+    background-color: #2c2c2c;
+    font-weight: bold;
+}
+
+/* -------------------------------------------------------------------------
+   7. BLOCOS DE CODIGO e CODIGO INLINE
+   ------------------------------------------------------------------------- */
+pre {
+    background-color: #2a2a2a;
+    border: 1px solid #444444;
+    border-radius: 4px;
+    padding: 1em;
+    overflow-x: auto;
+    margin: 1.5em 0;
+}
+
+pre code {
+    font-family: Consolas, "Courier New", monospace;   /* fonte de largura fixa */
+    font-size: 0.9em;
+    background: none;
+    padding: 0;
+    color: #d8d8d8;
+}
+
+code {
+    font-family: Consolas, "Courier New", monospace;
+    background-color: #2c2c2c;
+    color: #e0b060;
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+/* -------------------------------------------------------------------------
+   8. DESTAQUES DE TEXTO INLINE — negrito, italico, marca-texto
+   ------------------------------------------------------------------------- */
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+mark {
+    background-color: #a68b1f;   /* amarelo escurecido para nao estourar no fundo escuro */
+    color: #1e1e1e;
+    padding: 0 0.15em;
+}
+
+/* -------------------------------------------------------------------------
+   9. REGUA HORIZONTAL (<hr>, "---" no markdown)
+   Mesma espessura da linha sob o titulo principal (h1, secao 2) + espaco
+   automatico de ~2 linhas de texto acima e abaixo.
+
+   Calculo do espaco: 2 linhas x line-height (1.6, definido no body) = 3.2em
+   Troque o "2" por outro numero de linhas e recalcule (linhas x 1.6).
+   ------------------------------------------------------------------------- */
+hr {
+    border: none;
+    border-top: 2px solid #d8d8d8;
+    margin: 3.2em 0;    /* 2 linhas de espaco acima E abaixo */
+}

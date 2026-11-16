@@ -1,0 +1,21 @@
+# Artefatos de build do Delphi
+*.dcu
+*.exe
+*.map
+*.drc
+*.dres
+*.identcache
+*.local
+*.tvsconfig
+*.stat
+__history/
+__recovery/
+Win32/
+Win64/
+mdviu_debug.log
+
+# Arquivos de teste manual (nao sao parte do produto, ver AGENTS.md)
+/MDviu_Delphi/teste*.md
+/MDviu_Delphi/pagina_*.md
+/MDviu_Delphi/subpasta/
+/MDviu_Delphi/*.pdf

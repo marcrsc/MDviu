@@ -1,0 +1,563 @@
+unit uMain;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
+  System.Classes, Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
+  Vcl.Edge, Winapi.WebView2, System.IOUtils, System.JSON, Vcl.ActnList,
+  Vcl.Menus, System.Actions, Vcl.StdCtrls, Vcl.ExtCtrls, System.Generics.Collections,
+  Vcl.Themes, Vcl.Styles, System.StrUtils, Winapi.ShellAPI, Vcl.Buttons,
+  System.NetEncoding;
+
+const
+  // Sufixo que marca qual arquivo de web\styles\*.css e o default (selecionado
+  // ao abrir, antes de voce escolher outro na combo). So um arquivo deve ter
+  // o sufixo por vez — para trocar o default, renomeie o arquivo.
+  DEFAULT_STYLE_SUFFIX = '_DEF';
+
+  // Visual dos botoes da barra superior (flat, fundo azul escuro)
+  BTN_WIDTH = 72;
+  BTN_GAP = 6;
+  BTN_COLOR: TColor = $502814; // azul escuro (BGR), mesmo tom do icone/tema
+
+type
+  // TSpeedButton herda Color como protected — republica como public pra poder
+  // pintar o fundo do botao.
+  TColoredSpeedButton = class(TSpeedButton)
+  public
+    property Color;
+  end;
+
+  TFormMain = class(TForm)
+    procedure FormCreate(Sender: TObject);
+  private
+    EdgeBrowser1: TEdgeBrowser;
+    ActionList1: TActionList;
+    ActReload: TAction;
+    ActPrint: TAction;
+    ActExportPdf: TAction;
+    ActOpen: TAction;
+    ActScrollTop: TAction;
+    ActBack: TAction;
+    PanelTop: TPanel;
+    LblStyle: TLabel;
+    ComboStyles: TComboBox;
+    BtnOpen: TColoredSpeedButton;
+    BtnBack: TColoredSpeedButton;
+    BtnReload: TColoredSpeedButton;
+    BtnScrollTop: TColoredSpeedButton;
+    BtnPrint: TColoredSpeedButton;
+    BtnExportPdf: TColoredSpeedButton;
+    ChkNewWindow: TCheckBox;
+    OpenDialog1: TOpenDialog;
+
+    FCurrentMDPath: string;    // caminho do .md atualmente aberto
+    FHistory: TStringList;     // pilha de arquivos visitados, pro botao "Voltar"
+    FWebFolder: string;        // pasta "web" ao lado do .exe (script.js, lib\, styles\)
+    FStylesFolder: string;     // web\styles\ — cada arquivo .css de dentro vira uma opcao
+    FCurrentStyleName: string; // nome do estilo selecionado (sem ".css")
+
+    procedure PopulateStyles;
+    procedure BuildShellAndNavigate;
+    procedure RenderCurrentFile;
+    function ReadWebFile(const AFileName: string): string;
+    procedure ComboStylesChange(Sender: TObject);
+    procedure LaunchNewMDviuWindow(const AFilePath: string);
+    procedure OpenRelatedMdFile(const AHref: string);
+
+    procedure EdgeBrowser1CreateWebViewCompleted(Sender: TCustomEdgeBrowser; AResult: HResult);
+    procedure EdgeBrowser1NavigationCompleted(Sender: TCustomEdgeBrowser; IsSuccess: Boolean;
+      WebErrorStatus: COREWEBVIEW2_WEB_ERROR_STATUS);
+    procedure EdgeBrowser1PrintToPDFCompleted(Sender: TCustomEdgeBrowser; ErrorCode: HResult;
+      IsSuccessful: Boolean);
+    procedure EdgeBrowser1NewWindowRequested(Sender: TCustomEdgeBrowser;
+      Args: TNewWindowRequestedEventArgs);
+    procedure EdgeBrowser1WebMessageReceived(Sender: TCustomEdgeBrowser;
+      Args: TWebMessageReceivedEventArgs);
+
+    procedure ActReloadExecute(Sender: TObject);
+    procedure ActPrintExecute(Sender: TObject);
+    procedure ActExportPdfExecute(Sender: TObject);
+    procedure ActOpenExecute(Sender: TObject);
+    procedure ActScrollTopExecute(Sender: TObject);
+    procedure ActBackExecute(Sender: TObject);
+  public
+  end;
+
+var
+  FormMain: TFormMain;
+
+implementation
+
+{$R *.dfm}
+
+// Converte uma string Pascal num literal de string JS/JSON corretamente escapado
+// (aspas, barras invertidas, quebras de linha, etc.) para uso dentro de ExecuteScript.
+function JsStringLiteral(const S: string): string;
+var
+  J: TJSONString;
+begin
+  J := TJSONString.Create(S);
+  try
+    Result := J.ToJSON;
+  finally
+    J.Free;
+  end;
+end;
+
+// Cria e posiciona um botao flat da barra superior, avancando ALeft pro proximo.
+procedure SetupToolbarButton(ABtn: TColoredSpeedButton; AParent: TWinControl; var ALeft: Integer;
+  const ACaption: string; AClick: TNotifyEvent);
+begin
+  ABtn.Parent := AParent;
+  ABtn.Caption := ACaption;
+  ABtn.Left := ALeft;
+  ABtn.Top := 4;
+  ABtn.Width := BTN_WIDTH;
+  ABtn.Height := 24;
+  ABtn.Flat := True;
+  ABtn.Color := BTN_COLOR;
+  ABtn.Font.Color := clWhite;
+  ABtn.StyleElements := [];
+  ABtn.OnClick := AClick;
+  Inc(ALeft, BTN_WIDTH + BTN_GAP);
+end;
+
+// Carrega o estilo visual VCL (OnyxBlue.vsf, ao lado do .exe) e o aplica ao
+// programa inteiro. Se o arquivo nao existir ou algo falhar, segue com o
+// visual padrao do Windows — nunca trava o app por causa disso.
+procedure LoadAppStyle;
+var
+  VsfPath, StyleName: string;
+begin
+  VsfPath := ExtractFilePath(ParamStr(0)) + 'OnyxBlue.vsf';
+  if not TFile.Exists(VsfPath) then
+    Exit;
+  try
+    TStyleManager.LoadFromFile(VsfPath);
+    for StyleName in TStyleManager.StyleNames do
+      if ContainsText(StyleName, 'Onyx') then
+      begin
+        TStyleManager.TrySetStyle(StyleName);
+        Break;
+      end;
+  except
+    // visual e cosmetico — uma falha aqui nao pode impedir o programa de abrir
+  end;
+end;
+
+procedure TFormMain.FormCreate(Sender: TObject);
+begin
+  LoadAppStyle;
+  Caption := 'MDviu';
+  FHistory := TStringList.Create;
+
+  var IconPath := ExtractFilePath(ParamStr(0)) + 'mdviu.ico';
+  if TFile.Exists(IconPath) then
+    Icon.LoadFromFile(IconPath);
+
+  FWebFolder := IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0))) + 'web\';
+  FStylesFolder := FWebFolder + 'styles\';
+
+  if ParamCount >= 1 then
+    FCurrentMDPath := ParamStr(1)
+  else
+    FCurrentMDPath := '';
+
+  // Barra superior com o seletor de estilo
+  PanelTop := TPanel.Create(Self);
+  PanelTop.Parent := Self;
+  PanelTop.Align := alTop;
+  PanelTop.Height := 32;
+  PanelTop.BevelOuter := bvNone;
+  PanelTop.Color := clBtnFace;
+
+  LblStyle := TLabel.Create(Self);
+  LblStyle.Parent := PanelTop;
+  LblStyle.Caption := 'Estilo:';
+  LblStyle.Left := 8;
+  LblStyle.Top := 9;
+
+  ComboStyles := TComboBox.Create(Self);
+  ComboStyles.Parent := PanelTop;
+  ComboStyles.Style := csDropDownList;
+  ComboStyles.Left := 50;
+  ComboStyles.Top := 5;
+  ComboStyles.Width := 160;
+
+  // 6 botoes, mesma largura, visual flat com fundo azul (TSpeedButton, por fora
+  // do tema VCL — StyleElements:=[] evita que o tema repinte por cima da cor).
+  var BtnLeft := 224;
+
+  BtnOpen := TColoredSpeedButton.Create(Self);
+  SetupToolbarButton(BtnOpen, PanelTop, BtnLeft, 'Abrir...', ActOpenExecute);
+
+  BtnBack := TColoredSpeedButton.Create(Self);
+  SetupToolbarButton(BtnBack, PanelTop, BtnLeft, 'Voltar', ActBackExecute);
+
+  BtnScrollTop := TColoredSpeedButton.Create(Self);
+  SetupToolbarButton(BtnScrollTop, PanelTop, BtnLeft, 'Topo', ActScrollTopExecute);
+
+  BtnReload := TColoredSpeedButton.Create(Self);
+  SetupToolbarButton(BtnReload, PanelTop, BtnLeft, 'Atualizar', ActReloadExecute);
+
+  BtnPrint := TColoredSpeedButton.Create(Self);
+  SetupToolbarButton(BtnPrint, PanelTop, BtnLeft, 'Imprimir', ActPrintExecute);
+
+  BtnExportPdf := TColoredSpeedButton.Create(Self);
+  SetupToolbarButton(BtnExportPdf, PanelTop, BtnLeft, 'Salvar PDF', ActExportPdfExecute);
+
+  ChkNewWindow := TCheckBox.Create(Self);
+  ChkNewWindow.Parent := PanelTop;
+  ChkNewWindow.Caption := 'Nova janela';
+  ChkNewWindow.Left := BtnLeft + 12;
+  ChkNewWindow.Top := 8;
+  ChkNewWindow.Width := 110;
+  ChkNewWindow.Checked := False; // link p/ outro .md navega na mesma janela por padrao (use "Voltar")
+
+  OpenDialog1 := TOpenDialog.Create(Self);
+  OpenDialog1.Filter := 'Arquivos Markdown (*.md)|*.md|Todos os arquivos (*.*)|*.*';
+  OpenDialog1.Title := 'Abrir arquivo Markdown';
+
+  EdgeBrowser1 := TEdgeBrowser.Create(Self);
+  EdgeBrowser1.Parent := Self;
+  EdgeBrowser1.Align := alClient;
+  EdgeBrowser1.OnCreateWebViewCompleted := EdgeBrowser1CreateWebViewCompleted;
+  EdgeBrowser1.OnNavigationCompleted := EdgeBrowser1NavigationCompleted;
+  EdgeBrowser1.OnPrintToPDFCompleted := EdgeBrowser1PrintToPDFCompleted;
+  EdgeBrowser1.OnNewWindowRequested := EdgeBrowser1NewWindowRequested;
+  EdgeBrowser1.OnWebMessageReceived := EdgeBrowser1WebMessageReceived;
+
+  PopulateStyles;
+  ComboStyles.OnChange := ComboStylesChange; // so depois de definir o ItemIndex inicial
+
+  // Atalhos de teclado: reconhecidos pelo formulario (Form.IsShortCut), o que faz o
+  // Vcl.Edge avisar o WebView2 que a tecla foi tratada por nos (em vez do navegador).
+  ActionList1 := TActionList.Create(Self);
+
+  ActReload := TAction.Create(Self);
+  ActReload.ActionList := ActionList1;
+  ActReload.ShortCut := VK_F5;
+  ActReload.OnExecute := ActReloadExecute;
+
+  ActPrint := TAction.Create(Self);
+  ActPrint.ActionList := ActionList1;
+  ActPrint.ShortCut := Vcl.Menus.ShortCut(Ord('P'), [ssCtrl]);
+  ActPrint.OnExecute := ActPrintExecute;
+
+  ActExportPdf := TAction.Create(Self);
+  ActExportPdf.ActionList := ActionList1;
+  ActExportPdf.ShortCut := Vcl.Menus.ShortCut(Ord('P'), [ssCtrl, ssShift]);
+  ActExportPdf.OnExecute := ActExportPdfExecute;
+
+  ActOpen := TAction.Create(Self);
+  ActOpen.ActionList := ActionList1;
+  ActOpen.ShortCut := Vcl.Menus.ShortCut(Ord('O'), [ssCtrl]);
+  ActOpen.OnExecute := ActOpenExecute;
+
+  ActScrollTop := TAction.Create(Self);
+  ActScrollTop.ActionList := ActionList1;
+  ActScrollTop.OnExecute := ActScrollTopExecute;
+
+  ActBack := TAction.Create(Self);
+  ActBack.ActionList := ActionList1;
+  ActBack.ShortCut := Vcl.Menus.ShortCut(VK_BACK, [ssAlt]); // Alt+Backspace, como em navegadores
+  ActBack.OnExecute := ActBackExecute;
+
+  EdgeBrowser1.CreateWebView;
+end;
+
+// Le web\styles\*.css e preenche a combo. Cada arquivo novo colocado nessa
+// pasta vira uma opcao automaticamente, sem precisar recompilar.
+procedure TFormMain.PopulateStyles;
+var
+  Files: TArray<string>;
+  FileName: string;
+  DefaultIndex: Integer;
+begin
+  ComboStyles.Items.BeginUpdate;
+  try
+    ComboStyles.Items.Clear;
+    if TDirectory.Exists(FStylesFolder) then
+    begin
+      Files := TDirectory.GetFiles(FStylesFolder, '*.css');
+      TArray.Sort<string>(Files);
+      for FileName in Files do
+        ComboStyles.Items.Add(TPath.GetFileNameWithoutExtension(FileName));
+    end;
+  finally
+    ComboStyles.Items.EndUpdate;
+  end;
+
+  // O default e quem tem o sufixo "_DEF" no nome (ex.: "Claro_DEF").
+  DefaultIndex := -1;
+  for var I := 0 to ComboStyles.Items.Count - 1 do
+    if EndsText(DEFAULT_STYLE_SUFFIX, ComboStyles.Items[I]) then
+    begin
+      DefaultIndex := I;
+      Break;
+    end;
+  if (DefaultIndex < 0) and (ComboStyles.Items.Count > 0) then
+    DefaultIndex := 0;
+
+  if DefaultIndex >= 0 then
+  begin
+    ComboStyles.ItemIndex := DefaultIndex;
+    FCurrentStyleName := ComboStyles.Items[DefaultIndex];
+  end;
+end;
+
+procedure TFormMain.ComboStylesChange(Sender: TObject);
+begin
+  if ComboStyles.ItemIndex < 0 then
+    Exit;
+  FCurrentStyleName := ComboStyles.Items[ComboStyles.ItemIndex];
+  RenderCurrentFile;
+end;
+
+function TFormMain.ReadWebFile(const AFileName: string): string;
+var
+  FullPath: string;
+begin
+  FullPath := FWebFolder + AFileName;
+  if TFile.Exists(FullPath) then
+    Result := TFile.ReadAllText(FullPath)
+  else
+    Result := '';
+end;
+
+procedure TFormMain.BuildShellAndNavigate;
+var
+  MarkdownItJs, ScriptJs, Shell: string;
+begin
+  // Protecao: um "</script" literal dentro do JS embutido fecharia a tag mais cedo.
+  MarkdownItJs := StringReplace(ReadWebFile('lib\markdown-it.min.js'), '</script',
+    '<\/script', [rfReplaceAll, rfIgnoreCase]);
+  ScriptJs := StringReplace(ReadWebFile('script.js'), '</script', '<\/script',
+    [rfReplaceAll, rfIgnoreCase]);
+
+  Shell :=
+    '<!DOCTYPE html>' +
+    '<html lang="pt-BR"><head><meta charset="UTF-8"><title>MDviu</title>' +
+    '<style id="user-style"></style>' +
+    '</head><body>' +
+    '<div id="content"><p style="text-align:center;color:#888;margin-top:4em;">' +
+    'Abra um arquivo .md com o MDviu (associe a extensao .md a este programa nas ' +
+    'propriedades do Windows, em "Abrir com").</p></div>' +
+    '<script>' + MarkdownItJs + '</script>' +
+    '<script>' + ScriptJs + '</script>' +
+    '</body></html>';
+
+  EdgeBrowser1.NavigateToString(Shell);
+end;
+
+procedure TFormMain.RenderCurrentFile;
+var
+  MdText, FileName, Css: string;
+begin
+  try
+    if FCurrentStyleName <> '' then
+      Css := ReadWebFile('styles\' + FCurrentStyleName + '.css')
+    else
+      Css := '';
+    EdgeBrowser1.ExecuteScript('setStyle(' + JsStringLiteral(Css) + ');');
+
+    if FCurrentMDPath = '' then
+      Exit;
+
+    if not TFile.Exists(FCurrentMDPath) then
+    begin
+      ShowMessage('Arquivo nao encontrado: ' + FCurrentMDPath);
+      Exit;
+    end;
+
+    MdText := TFile.ReadAllText(FCurrentMDPath);
+    FileName := ExtractFileName(FCurrentMDPath);
+
+    EdgeBrowser1.ExecuteScript('renderMD(' + JsStringLiteral(MdText) + ', ' +
+      JsStringLiteral(FileName) + ');');
+
+    Caption := 'MDviu - ' + FileName;
+  except
+    on E: Exception do
+      ShowMessage('Erro ao exibir o arquivo: ' + E.Message);
+  end;
+end;
+
+procedure TFormMain.EdgeBrowser1CreateWebViewCompleted(Sender: TCustomEdgeBrowser;
+  AResult: HResult);
+begin
+  if Succeeded(AResult) then
+    BuildShellAndNavigate
+  else
+    ShowMessage('Nao foi possivel iniciar o WebView2 (erro ' + IntToHex(AResult, 8) + ').');
+end;
+
+procedure TFormMain.EdgeBrowser1NavigationCompleted(Sender: TCustomEdgeBrowser;
+  IsSuccess: Boolean; WebErrorStatus: COREWEBVIEW2_WEB_ERROR_STATUS);
+begin
+  if IsSuccess then
+    RenderCurrentFile;
+end;
+
+// Link externo (http/https, marcado com target=_blank pelo script.js) — sempre
+// abre no navegador padrao do Windows, nunca dentro do MDviu.
+procedure TFormMain.EdgeBrowser1NewWindowRequested(Sender: TCustomEdgeBrowser;
+  Args: TNewWindowRequestedEventArgs);
+var
+  UriPtr: PWideChar;
+  Uri: string;
+begin
+  Args.ArgsInterface.Get_uri(UriPtr);
+  Uri := UriPtr;
+  Args.ArgsInterface.Set_Handled(1);
+  ShellExecute(0, 'open', PChar(Uri), nil, nil, SW_SHOWNORMAL);
+end;
+
+// Mensagens vindas do script.js (window.chrome.webview.postMessage), disparadas
+// ao clicar num link interno que aponta pra OUTRO arquivo .md (nao uma ancora
+// #... da mesma pagina, essa o proprio navegador ja resolve sozinho).
+procedure TFormMain.EdgeBrowser1WebMessageReceived(Sender: TCustomEdgeBrowser;
+  Args: TWebMessageReceivedEventArgs);
+var
+  MsgPtr: PWideChar;
+  JsonVal: TJSONValue;
+  Href: string;
+begin
+  if Args.ArgsInterface.TryGetWebMessageAsString(MsgPtr) <> S_OK then
+    Exit;
+
+  JsonVal := TJSONObject.ParseJSONValue(string(MsgPtr));
+  if JsonVal = nil then
+    Exit;
+  try
+    if (JsonVal is TJSONObject) and TJSONObject(JsonVal).TryGetValue<string>('href', Href) then
+      OpenRelatedMdFile(Href);
+  finally
+    JsonVal.Free;
+  end;
+end;
+
+// Resolve um link relativo pra outro .md (relativo a pasta do arquivo atual) e
+// abre — na mesma janela (empilhando o atual pro "Voltar") ou numa nova janela,
+// conforme a caixinha "Nova janela".
+procedure TFormMain.OpenRelatedMdFile(const AHref: string);
+var
+  DecodedHref, TargetPath: string;
+begin
+  // O markdown-it codifica a URL do link (ex.: "\" vira "%5C") — decodifica
+  // antes de resolver o caminho, senao "..\arquivo.md" nao seria encontrado.
+  DecodedHref := TNetEncoding.URL.Decode(AHref);
+
+  if FCurrentMDPath <> '' then
+    TargetPath := TPath.GetFullPath(TPath.Combine(ExtractFilePath(FCurrentMDPath), DecodedHref))
+  else
+    TargetPath := DecodedHref;
+
+  if not TFile.Exists(TargetPath) then
+  begin
+    ShowMessage('Arquivo nao encontrado: ' + TargetPath);
+    Exit;
+  end;
+
+  if ChkNewWindow.Checked then
+  begin
+    LaunchNewMDviuWindow(TargetPath);
+    Exit;
+  end;
+
+  if FCurrentMDPath <> '' then
+    FHistory.Add(FCurrentMDPath);
+  FCurrentMDPath := TargetPath;
+  RenderCurrentFile;
+end;
+
+// Abre outra janela do MDviu (outro processo do mesmo .exe) com o arquivo indicado.
+procedure TFormMain.LaunchNewMDviuWindow(const AFilePath: string);
+begin
+  ShellExecute(0, 'open', PChar(ParamStr(0)), PChar('"' + AFilePath + '"'), nil, SW_SHOWNORMAL);
+end;
+
+procedure TFormMain.EdgeBrowser1PrintToPDFCompleted(Sender: TCustomEdgeBrowser;
+  ErrorCode: HResult; IsSuccessful: Boolean);
+begin
+  if IsSuccessful then
+    ShowMessage('PDF salvo em: ' + ChangeFileExt(FCurrentMDPath, '.pdf'))
+  else
+    ShowMessage('Falha ao gerar o PDF.');
+end;
+
+// F5 / botao "Atualizar" — rele o .md e o style.css direto do disco e manda
+// tudo de novo pro WebView2 (sem recarregar a pagina: so reinjeta o conteudo).
+procedure TFormMain.ActReloadExecute(Sender: TObject);
+begin
+  RenderCurrentFile;
+end;
+
+// Ctrl+P — abre a tela de impressao nativa do navegador (com preview), onde
+// "Microsoft Print to PDF" ja aparece como impressora padrao do Windows.
+procedure TFormMain.ActPrintExecute(Sender: TObject);
+begin
+  EdgeBrowser1.ShowPrintUI(TEdgeBrowser.TPrintUIDialogKind.Browser);
+end;
+
+// Ctrl+Shift+P — exporta direto pra PDF, sem dialogo, salvando ao lado do .md
+// com o mesmo nome (so troca a extensao), mantendo cores de fundo do CSS.
+procedure TFormMain.ActExportPdfExecute(Sender: TObject);
+var
+  Settings: ICoreWebView2PrintSettings;
+  PdfPath: string;
+begin
+  if FCurrentMDPath = '' then
+  begin
+    ShowMessage('Nenhum arquivo .md aberto.');
+    Exit;
+  end;
+
+  Settings := EdgeBrowser1.CreatePrintSettings;
+  if Settings = nil then
+  begin
+    ShowMessage('Nao foi possivel criar as configuracoes de impressao.');
+    Exit;
+  end;
+
+  Settings.Set_ShouldPrintBackgrounds(1);
+
+  PdfPath := ChangeFileExt(FCurrentMDPath, '.pdf');
+  EdgeBrowser1.PrintToPDF(PdfPath, Settings);
+end;
+
+// Botao "Topo" — rola o conteudo de volta pro inicio (util em arquivos com
+// indice/sumario no comeco e muitas secoes).
+procedure TFormMain.ActScrollTopExecute(Sender: TObject);
+begin
+  EdgeBrowser1.ExecuteScript('window.scrollTo({top: 0, behavior: "smooth"});');
+end;
+
+// Botao "Voltar" / Alt+Backspace — reabre o arquivo imediatamente anterior
+// (como o "voltar" de um navegador), util navegando entre varios .md ligados
+// por link na mesma janela.
+procedure TFormMain.ActBackExecute(Sender: TObject);
+begin
+  if FHistory.Count = 0 then
+    Exit;
+  FCurrentMDPath := FHistory[FHistory.Count - 1];
+  FHistory.Delete(FHistory.Count - 1);
+  RenderCurrentFile;
+end;
+
+// Botao/Ctrl+O — abre o seletor de arquivo nativo do Windows, alternativa ao
+// duplo clique (ex.: quando o MDviu ja esta aberto e voce quer trocar de arquivo).
+procedure TFormMain.ActOpenExecute(Sender: TObject);
+begin
+  if not OpenDialog1.Execute(Handle) then
+    Exit;
+
+  if FCurrentMDPath <> '' then
+    FHistory.Add(FCurrentMDPath);
+  FCurrentMDPath := OpenDialog1.FileName;
+  RenderCurrentFile;
+end;
+
+end.
