@@ -18,6 +18,7 @@ construido em Delphi (RAD Studio 37.0) usando `TEdgeBrowser` (WebView2).
 - [Imagens](#imagens)
 - [Destaque de sintaxe em blocos de codigo](#destaque-de-sintaxe-em-blocos-de-codigo)
 - [Abrir codigo fonte direto](#abrir-codigo-fonte-direto)
+- [Copiar bloco de codigo](#copiar-bloco-de-codigo)
 - [Estilos css editaveis](#estilos-css-editaveis)
 - [Limitacoes conhecidas](#limitacoes-conhecidas)
 - [Bugs importantes ja corrigidos](#bugs-importantes-ja-corrigidos)
@@ -283,6 +284,25 @@ decide isso pela extensao do arquivo, nao importa como foi aberto:
 
 Extensao fora dessa lista (inclusive `.md`) continua sendo tratada como
 Markdown, igual sempre foi.
+
+## Copiar bloco de codigo
+
+Todo `<pre>` (bloco de codigo com ou sem highlight — fenced do markdown-it
+ou arquivo de codigo-fonte aberto direto, ver secao anterior) ganha um
+botao "Copiar" no canto superior direito, visivel so no hover do bloco
+(`addCopyButtons()`/`injectCopyButtonStyle()` em `lib\script.js` — estilo
+proprio, nao depende dos 3 CSS do projeto). Copia o texto puro (sem as tags
+de cor do highlight).
+
+Dois jeitos de copiar, o segundo so entra se o primeiro falhar:
+
+1. `navigator.clipboard.writeText` (API padrao do navegador).
+2. Se isso falhar — pagina carregada via `NavigateToString` tem origem
+   "opaca", que pode restringir a Clipboard API (mesmo motivo do `fetch()`
+   falhar pra imagem via host virtual, ver [Imagens](#imagens)) — cai pra
+   `window.chrome.webview.postMessage({copyText: texto})`, que o Delphi
+   recebe em `EdgeBrowser1WebMessageReceived` e escreve direto na area de
+   transferencia do Windows (`Clipboard.AsText`, unit `Vcl.Clipbrd`).
 
 ## Estilos css editaveis
 

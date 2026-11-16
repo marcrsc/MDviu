@@ -2,11 +2,17 @@
 
 Visualizador de Markdown leve e customizavel via CSS externo.
 
+> **Projeto pessoal, sem suporte.** Feito pra uso proprio, customizado
+> conforme as preferencias do autor — nao e um produto. Mesmo compartilhado
+> com a comunidade, nao ha nenhum tipo de suporte (ver isencao de
+> responsabilidade na [licenca](LICENSE)).
+
 ## Indice
 
 - [Visao geral](#visao-geral)
 - [Os dois apps deste repositorio](#os-dois-apps-deste-repositorio)
 - [Estrutura do repositorio](#estrutura-do-repositorio)
+- [Licenca](#licenca)
 - [Para continuar o projeto](#para-continuar-o-projeto)
 
 ## Visao geral
@@ -42,8 +48,26 @@ MDviu/
 ├── MDviu_HTML/         Protótipo HTML/CSS/JS puro
 │   └── MDviu_HTML.md   Detalhes deste protótipo
 ├── AGENTS.md           Regras e contexto pra quem (ou IA) continuar o projeto
+├── LICENSE             Licenca MIT
 └── README.md           Este arquivo
 ```
+
+## Licenca
+
+MIT — ver [LICENSE](LICENSE). Livre pra usar, copiar, modificar e
+redistribuir, por sua conta e risco (sem garantia nem responsabilidade do
+autor por danos).
+
+Parte do desenvolvimento (codigo, documentacao e testes) teve assistencia de
+IA (Claude, Anthropic) — ver os commits com `Co-Authored-By: Claude` no
+historico do Git.
+
+O app MDviu (Delphi) embute duas bibliotecas de terceiros, cada uma com sua
+propria licenca permissiva — detalhes (versao, fonte, licenca) em
+[MDviu_Delphi/MDviu.md#bibliotecas-de-terceiros](MDviu_Delphi/MDviu.md#bibliotecas-de-terceiros):
+
+- [markdown-it](https://github.com/markdown-it/markdown-it) — MIT
+- [highlight.js](https://github.com/highlightjs/highlight.js) — BSD-3-Clause
 
 ## Para continuar o projeto
 

@@ -8,7 +8,7 @@ uses
   Vcl.Edge, Winapi.WebView2, System.IOUtils, System.JSON, Vcl.ActnList,
   Vcl.Menus, System.Actions, Vcl.StdCtrls, Vcl.ExtCtrls, System.Generics.Collections,
   Vcl.Themes, Vcl.Styles, System.StrUtils, Winapi.ShellAPI, Vcl.Buttons,
-  System.NetEncoding, System.RegularExpressions;
+  System.NetEncoding, System.RegularExpressions, Vcl.Clipbrd;
 
 const
   // Sufixo que marca qual arquivo de web\styles\*.css e o default (selecionado
@@ -610,15 +610,17 @@ begin
   ShellExecute(0, 'open', PChar(Uri), nil, nil, SW_SHOWNORMAL);
 end;
 
-// Mensagens vindas do script.js (window.chrome.webview.postMessage), disparadas
-// ao clicar num link interno que aponta pra OUTRO arquivo .md (nao uma ancora
-// #... da mesma pagina, essa o proprio navegador ja resolve sozinho).
+// Mensagens vindas do script.js (window.chrome.webview.postMessage): clique
+// num link interno pra outro arquivo ("href") ou pedido de copiar um bloco
+// de codigo pra area de transferencia ("copyText" — fallback de
+// copyCodeBlock() quando navigator.clipboard falha nessa origem "opaca" do
+// NavigateToString, ver comentario em lib\script.js).
 procedure TFormMain.EdgeBrowser1WebMessageReceived(Sender: TCustomEdgeBrowser;
   Args: TWebMessageReceivedEventArgs);
 var
   MsgPtr: PWideChar;
   JsonVal: TJSONValue;
-  Href: string;
+  Href, CopyText: string;
 begin
   if Args.ArgsInterface.TryGetWebMessageAsString(MsgPtr) <> S_OK then
     Exit;
@@ -627,8 +629,12 @@ begin
   if JsonVal = nil then
     Exit;
   try
-    if (JsonVal is TJSONObject) and TJSONObject(JsonVal).TryGetValue<string>('href', Href) then
-      OpenRelatedMdFile(Href);
+    if not (JsonVal is TJSONObject) then
+      Exit;
+    if TJSONObject(JsonVal).TryGetValue<string>('href', Href) then
+      OpenRelatedMdFile(Href)
+    else if TJSONObject(JsonVal).TryGetValue<string>('copyText', CopyText) then
+      Clipboard.AsText := CopyText;
   finally
     JsonVal.Free;
   end;

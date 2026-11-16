@@ -8,6 +8,23 @@ const contentEl = document.getElementById("content");
 // interface pra isso por enquanto — so trocar aqui e recompilar).
 const ENABLE_SYNTAX_HIGHLIGHT = true;
 
+// Botao "Copiar" de cada bloco de codigo (ver addCopyButtons abaixo) — estilo
+// proprio, injetado aqui mesmo (nao depende de mexer nos 3 CSS do projeto).
+// Fundo escuro semi-transparente funciona em cima de qualquer <pre>, claro
+// ou escuro; so aparece no hover do bloco.
+(function injectCopyButtonStyle() {
+    const style = document.createElement("style");
+    style.textContent =
+        "pre{position:relative}" +
+        ".mdviu-copy-btn{position:absolute;top:.5em;right:.5em;padding:.2em .6em;" +
+        "font-size:.75em;font-family:\"Segoe UI\",Calibri,Arial,sans-serif;color:#fff;" +
+        "background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.3);border-radius:3px;" +
+        "cursor:pointer;opacity:0;transition:opacity .15s ease}" +
+        "pre:hover .mdviu-copy-btn,.mdviu-copy-btn:focus{opacity:1}" +
+        ".mdviu-copy-btn:hover{background:rgba(0,0,0,.75)}";
+    document.head.appendChild(style);
+})();
+
 const md = window.markdownit({
     html: false,
     linkify: true,
@@ -247,6 +264,7 @@ function prepareScrollAnchor(fullPath) {
 function finishRender(fullPath, filename, isBack, anchor) {
     const isSameFile = fullPath === currentPath;
     document.title = "MDviu - " + (filename || "sem nome");
+    addCopyButtons();
 
     if (isSameFile) {
         restoreScrollAnchor(anchor);
@@ -256,6 +274,48 @@ function finishRender(fullPath, filename, isBack, anchor) {
         window.scrollTo(0, 0);
     }
     currentPath = fullPath || "";
+}
+
+// Botao "Copiar" em todo <pre> (bloco de codigo com ou sem highlight — tanto
+// faz vir do markdown-it/fence quanto de renderSource()). Copia o TEXTO puro
+// (codeEl.textContent ignora as <span> de cor do highlight.js).
+function addCopyButtons() {
+    contentEl.querySelectorAll("pre").forEach((pre) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "mdviu-copy-btn";
+        btn.textContent = "Copiar";
+        btn.addEventListener("click", () => copyCodeBlock(pre, btn));
+        pre.appendChild(btn);
+    });
+}
+
+function copyCodeBlock(pre, btn) {
+    const codeEl = pre.querySelector("code");
+    const text = codeEl ? codeEl.textContent : pre.textContent;
+
+    const onCopied = () => {
+        const original = btn.textContent;
+        btn.textContent = "Copiado!";
+        setTimeout(() => { btn.textContent = original; }, 1500);
+    };
+
+    // navigator.clipboard pode falhar na origem "opaca" do NavigateToString
+    // (mesmo motivo do fetch() falhando pra imagem via host virtual, ver
+    // InlineLocalImages em uMain.pas) — nesse caso cai pro Delphi, que
+    // escreve na area de transferencia do Windows direto (Clipboard.AsText).
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(onCopied).catch(() => copyCodeBlockViaDelphi(text, onCopied));
+    } else {
+        copyCodeBlockViaDelphi(text, onCopied);
+    }
+}
+
+function copyCodeBlockViaDelphi(text, onCopied) {
+    if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage(JSON.stringify({ copyText: text }));
+        onCopied();
+    }
 }
 
 // Chamado pelo Delphi (ExecuteScript) com o texto do .md, o nome do arquivo,
