@@ -518,6 +518,10 @@ begin
     end;
 
     Caption := 'MDviu - ' + FileName;
+
+    // Sem isso o foco fica no ultimo controle da toolbar (ex.: combo de
+    // estilo, primeiro TabStop criado) em vez do conteudo exibido.
+    EdgeBrowser1.SetFocus;
   except
     on E: Exception do
       ShowMessage('Erro ao exibir o arquivo: ' + E.Message);
@@ -681,7 +685,10 @@ end;
 // indice/sumario no comeco e muitas secoes).
 procedure TFormMain.ActScrollTopExecute(Sender: TObject);
 begin
-  EdgeBrowser1.ExecuteScript('window.scrollTo({top: 0, behavior: "smooth"});');
+  // behavior "smooth" depende da config de animacao do Windows (Chromium
+  // respeita "reduzir movimento"/"mostrar animacoes") — sem "behavior" fica
+  // sempre instantaneo, igual em qualquer maquina.
+  EdgeBrowser1.ExecuteScript('window.scrollTo(0, 0);');
 end;
 
 // Botao "Voltar" / Alt+Backspace — reabre o arquivo imediatamente anterior
