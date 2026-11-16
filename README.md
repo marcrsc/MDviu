@@ -11,6 +11,7 @@ Visualizador de Markdown leve e customizavel via CSS externo.
 
 - [Visao geral](#visao-geral)
 - [Os dois apps deste repositorio](#os-dois-apps-deste-repositorio)
+- [Uso](#uso)
 - [Estrutura do repositorio](#estrutura-do-repositorio)
 - [Licenca](#licenca)
 - [Para continuar o projeto](#para-continuar-o-projeto)
@@ -22,13 +23,13 @@ com controle total do visual via CSS (como se cada elemento — titulos, tabela,
 links, blocos de codigo, destaques, regua horizontal — fosse estilizavel
 igual a uma pagina HTML comum).
 
-O repositorio guarda dois apps, nessa ordem de evolucao:
+O repositorio guarda dois apps:
 
-1. **MDviu_HTML** — protótipo em HTML/CSS/JS puro, sem instalação, usado pra
-   desenhar o CSS sem precisar compilar nada.
-2. **MDviu_Delphi** — o app de verdade: programa Windows nativo (Delphi +
+1. **MDviu_Delphi** — o app de verdade: programa Windows nativo (Delphi +
    WebView2), com duplo clique, associação de arquivo, barra de ferramentas,
    multiplos estilos CSS trocaveis e exportação em PDF.
+2. **MDviu_HTML** — protótipo em HTML/CSS/JS puro, sem instalação, usado pra
+   desenhar o CSS sem precisar compilar nada.
 
 ## Os dois apps deste repositorio
 
@@ -36,6 +37,35 @@ O repositorio guarda dois apps, nessa ordem de evolucao:
 |---|---|---|
 | MDviu (Delphi) | [MDviu_Delphi/](MDviu_Delphi/) | [MDviu.md](MDviu_Delphi/MDviu.md) |
 | MDviu_HTML (protótipo) | [MDviu_HTML/](MDviu_HTML/) | [MDviu_HTML.md](MDviu_HTML/MDviu_HTML.md) |
+
+## Uso
+
+So pra **rodar** o MDviu (Delphi) ja compilado:
+
+- Windows com o **WebView2 Runtime** instalado (vem por padrao no
+  Windows 11; se faltar, o Windows instala sozinho quando necessario).
+  Deve funcionar em Windows a partir do 7, nao testado.
+- **Compilado só pra Windows 64 bits** — não roda em Windows de 32 bits.
+- Estes arquivos juntos, na mesma pasta — todos ja prontos em
+  `MDviu_Delphi/` no repositorio, exceto o `.exe` (gerado ao compilar, ver
+  link no fim desta secao; nao fica no repositorio, `*.exe` esta no
+  `.gitignore`):
+
+  | Arquivo | Para que serve |
+  |---|---|
+  | `MDviu.exe` | O programa — icone e estilo visual (OnyxBlue) ja vem embutidos nele |
+  | `WebView2Loader.dll` | Loader do WebView2 — sem ele o app nao abre |
+  | `lib\` | Scripts (markdown-it, highlight.js, script.js) |
+  | `styles\*.css` | Estilos disponiveis na combo "Estilo" |
+
+  Detalhe de cada um em
+  [MDviu_Delphi/MDviu.md#arquivos-que-acompanham-o-exe](MDviu_Delphi/MDviu.md#arquivos-que-acompanham-o-exe).
+- Abrir um `.md`: duplo clique (apos associar a extensao ao `MDviu.exe` nas
+  propriedades do Windows), pelo botao "Abrir..." dentro do programa, ou
+  `MDviu.exe caminho\do\arquivo.md` pela linha de comando.
+
+Para compilar, veja instrucoes em
+[MDviu_Delphi/MDviu.md#como-compilar](MDviu_Delphi/MDviu.md#como-compilar).
 
 ## Estrutura do repositorio
 

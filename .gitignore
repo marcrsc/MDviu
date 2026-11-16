@@ -16,6 +16,12 @@ Win32/
 Win64/
 mdviu_debug.log
 
+# Excecao: MDviu.res/MDviu.dres carregam o icone e o OnyxBlue.vsf embutidos
+# no .exe (ver uMain.pas/LoadAppStyle e MDviu.dpr) — nao sao descartaveis,
+# tem que ir versionados.
+!/MDviu_Delphi/MDviu.res
+!/MDviu_Delphi/MDviu.dres
+
 # Arquivos de teste manual (nao sao parte do produto, ver AGENTS.md)
 /testes/
 /MDviu_Delphi/*.pdf

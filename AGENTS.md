@@ -40,7 +40,7 @@ limitacoes conhecidas e bugs ja corrigidos (nao redescobrir os mesmos).
 | Codigo do app Delphi | `MDviu_Delphi/uMain.pas`, `MDviu_Delphi/MDviu.dpr` |
 | CSS editaveis (combo "Estilo") | `MDviu_Delphi/styles/*.css` |
 | Logica JS (markdown-it, links, titulos) | `MDviu_Delphi/lib/script.js` |
-| Dependencias que tem que ir junto do `.exe` | `WebView2Loader.dll`, `OnyxBlue.vsf`, `mdviu.ico`, pastas `lib/` e `styles/` |
+| Dependencias que tem que ir junto do `.exe` | `WebView2Loader.dll`, pastas `lib/` e `styles/` (icone e estilo VCL ja vem embutidos no `.exe`, ver [MDviu_Delphi/MDviu.md#arquivos-que-acompanham-o-exe](MDviu_Delphi/MDviu.md#arquivos-que-acompanham-o-exe)) |
 | Protótipo HTML | `MDviu_HTML/` |
 | `testes/` (raiz do repo) | So material de teste manual (md, imagens, subpasta) — nao e parte do produto |
 
