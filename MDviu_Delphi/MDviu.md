@@ -11,6 +11,10 @@ construido em Delphi (RAD Studio 37.0) usando `TEdgeBrowser` (WebView2).
 - [Arquitetura](#arquitetura)
 - [Barra de ferramentas e atalhos](#barra-de-ferramentas-e-atalhos)
 - [Como funcionam os links](#como-funcionam-os-links)
+- [Destaque de texto](#destaque-de-texto)
+- [Html cru opcional](#html-cru-opcional)
+- [Quebras de linha](#quebras-de-linha)
+- [Imagens](#imagens)
 - [Estilos css editaveis](#estilos-css-editaveis)
 - [Limitacoes conhecidas](#limitacoes-conhecidas)
 - [Bugs importantes ja corrigidos](#bugs-importantes-ja-corrigidos)
@@ -38,9 +42,9 @@ Todos estes arquivos moram ao lado de `MDviu.exe` e sao obrigatorios:
 | `WebView2Loader.dll` | Loader do WebView2 — sem ele o app nao abre (ver [Bugs importantes ja corrigidos](#bugs-importantes-ja-corrigidos)) |
 | `OnyxBlue.vsf` | Estilo visual VCL (tema azul escuro da interface) |
 | `mdviu.ico` | Icone do programa |
-| `web\script.js` | Logica de renderizacao (markdown-it, links, titulos) |
-| `web\lib\markdown-it.min.js` | Biblioteca de conversao Markdown -> HTML |
-| `web\styles\*.css` | Um arquivo por estilo disponivel na combo "Estilo" |
+| `lib\script.js` | Logica de renderizacao (markdown-it, links, titulos) |
+| `lib\markdown-it.min.js` | Biblioteca de conversao Markdown -> HTML |
+| `styles\*.css` | Um arquivo por estilo disponivel na combo "Estilo" |
 
 ## Arquitetura
 
@@ -65,15 +69,35 @@ Fluxo de carregamento:
 | Botao | Atalho | Acao |
 |---|---|---|
 | Abrir... | Ctrl+O | Abre outro `.md` (dialogo nativo do Windows) |
-| Voltar | Alt+Backspace | Reabre o arquivo imediatamente anterior |
+| Voltar | Alt+Backspace | Reabre o arquivo imediatamente anterior, restaurando a posicao de rolagem de onde estava |
 | Topo | — | Rola o conteudo de volta pro inicio |
-| Atualizar | F5 | Rele o `.md` e o CSS selecionado do disco |
+| Atualizar | F5 | Rele o `.md` e o CSS selecionado do disco, sem mexer na rolagem atual |
 | Imprimir | Ctrl+P | Abre a impressao nativa do WebView2 (com preview) |
 | Salvar PDF | Ctrl+Shift+P | Exporta PDF direto, sem dialogo, ao lado do `.md` |
 
-A combo "Estilo" lista os arquivos de `web\styles\*.css`. A caixa "Nova
+"Voltar" empilha em `FHistory` (sem limite) toda vez que voce abre outro
+arquivo (link ou "Abrir...") — funciona pra cadeia inteira de arquivos
+visitados nesta janela, nao so um passo. So esvazia fechando a janela
+(processo novo = pilha nova).
+
+**Rolagem**: abrir um arquivo novo (Abrir, link, duplo clique) sempre
+comeca do topo. So "Voltar" restaura a posicao de rolagem exata de quando
+voce saiu daquele arquivo (guardada em `script.js`, por caminho completo,
+enquanto o processo estiver aberto). F5 e troca de estilo/caixa "HTML"
+(mesmo arquivo) mantem onde voce esta — mas trocar de estilo muda tamanho
+de fonte e espacamento, entao a posicao em pixel de antes nao aponta mais
+pro mesmo trecho; em vez de guardar pixel, o `script.js` guarda **qual
+bloco** (paragrafo, titulo, tabela etc.) esta encostado no topo da tela e
+rola ate esse mesmo bloco depois de re-renderizar — funciona porque o
+texto nao muda, so o CSS, entao a ordem dos blocos e sempre identica.
+
+A combo "Estilo" lista os arquivos de `styles\*.css`. A caixa "Nova
 janela" controla o comportamento dos links pra outro `.md` (ver proxima
-secao) — desmarcada por padrao.
+secao) — desmarcada por padrao. A caixa "HTML" libera HTML cru no arquivo
+atual (ver [Destaque de texto](#destaque-de-texto) e a nota de seguranca
+logo abaixo) — tambem desmarcada por padrao, e volta a desmarcar sozinha
+toda vez que um arquivo diferente e aberto (Abrir, link pra outro `.md`,
+Voltar).
 
 ## Como funcionam os links
 
@@ -91,12 +115,85 @@ secao) — desmarcada por padrao.
   WebView2 sinaliza isso via `NewWindowRequested`, que o Delphi sempre
   intercepta e redireciona pro navegador do sistema.
 
+## Destaque de texto
+
+Duas sintaxes marcam texto com fundo colorido (`mark` no CSS, secao 8 de
+cada estilo), funcionam juntas inclusive aninhadas em `**negrito**` —
+independente da caixa "HTML" (ver [HTML cru opcional](#html-cru-opcional))
+estar marcada ou nao:
+
+- `==texto destacado==` — nao existe no `markdown-it` nativo; o
+  `script.js` adiciona uma regra inline propria (`mark_delim`) que cria os
+  tokens `mark_open`/`mark_close`.
+- `<mark>texto destacado</mark>` — tag HTML5 oficial. Uma segunda regra
+  (`mark_tag`) reconhece **so** essas duas strings literais e as converte
+  nos mesmos tokens, direto, sem depender do `html: true`/`false` geral do
+  markdown-it (roda antes da regra nativa de HTML na ordem do parser).
+
+## Html cru opcional
+
+Por padrao o markdown-it roda com `html: false` — qualquer tag solta no
+`.md` (`<div>`, `<b>`, `<img>`, `<script>`, etc.) aparece como texto
+literal, escapada. A caixa "HTML" na barra liga `html: true` so pro
+arquivo atual (`md.set({ html: ... })` em `script.js`, antes de cada
+`md.render()`), deixando essas tags passarem cru pro HTML final.
+
+- **Desmarcada por padrao**, e volta a desmarcar sozinha toda vez que um
+  arquivo diferente e aberto (Abrir, link pra outro `.md`, Voltar) — nunca
+  fica ligada "sem querer" num arquivo que voce nao escolheu abrir com ela
+  ligada.
+- **Risco real**: com a caixa marcada, um `.md` que executa `<script>` roda
+  esse JS dentro do WebView2 do MDviu. Só marque em arquivo que voce
+  escreveu ou confia — e a mesma logica de "pergunta antes de confiar" vale
+  pra qualquer `.md` recebido de terceiro.
+
+## Quebras de linha
+
+Dois comportamentos fora do padrao CommonMark, pensados pra quem escreve
+quebrando linha com frequencia (uma frase por linha, paragrafos separados
+por varias linhas em branco):
+
+- **Quebra de linha simples dentro de um paragrafo** (uma linha logo
+  abaixo da outra, sem linha em branco entre elas) vira `<br>` — opcao
+  `breaks: true` do markdown-it (`script.js`). Por padrao do Markdown isso
+  seria ignorado, juntando tudo num paragrafo so que quebra pela largura da
+  janela.
+- **Varias linhas em branco seguidas** empilham espaco: cada linha em
+  branco **alem da primeira** vira um paragrafo vazio forcado (um `&nbsp;`
+  invisivel, pra nao depender da caixa "HTML"). Por padrao do Markdown,
+  1 linha em branco ou 10 dao exatamente o mesmo resultado — aqui,
+  cada uma a mais soma espaco visivel. Implementado em
+  `expandBlankLines()` (`script.js`), que preserva o conteudo de blocos de
+  codigo (` ``` `/`~~~`) sem mexer — linha em branco la dentro continua
+  sendo so conteudo literal do codigo.
+
+## Imagens
+
+- **Caminho absoluto** (`http://`, `https://`): carrega normal, direto da
+  internet, sem nenhum tratamento especial.
+- **Caminho relativo** (`![alt](foo.jpg)`, mesma pasta ou subpasta do
+  `.md`, inclusive com `../`): o WebView2 nao tem "pasta atual" de disco
+  pra resolver isso sozinho (a pagina e injetada via `NavigateToString`,
+  nao carregada de um `file://` real). Por isso, antes de mandar o texto
+  pro JS, o Delphi (`InlineLocalImages`/`ImageToDataUri` em `uMain.pas`) le
+  a imagem do disco e substitui o caminho por um `data:` URI em base64,
+  embutido direto no HTML — funciona sem rede, sem CORS, sem limite de
+  pasta. So reconhece `.jpg`/`.jpeg`/`.png`/`.gif`/`.svg`/`.webp`/`.bmp`;
+  arquivo nao encontrado ou extensao desconhecida deixa o caminho original
+  (a imagem so nao aparece).
+- **Tag `<img>` crua** (com a caixa "HTML" marcada, ver
+  [Html cru opcional](#html-cru-opcional)): o embutir em base64 so olha
+  sintaxe Markdown (`![alt](caminho)`), nao mexe em HTML cru — um
+  `<img src="relativo.jpg">` cru so carrega se o caminho for absoluto
+  (`http://`/`https://`).
+
 ## Estilos css editaveis
 
-Cada arquivo em `web\styles\` vira uma opcao na combo "Estilo" (nome do
-arquivo sem a extensao). O arquivo cujo nome contem o sufixo `_DEF` (ex.:
-`Claro_DEF.css`) e o selecionado por padrao ao abrir — pra trocar o
-default, renomeie o sufixo pra outro arquivo.
+Cada arquivo em `styles\` vira uma opcao na combo "Estilo" (nome do
+arquivo sem a extensao e sem o sufixo `_DEF`, se tiver — e so estetico, o
+arquivo no disco continua com o sufixo). O arquivo cujo nome **de disco**
+contem o sufixo `_DEF` (ex.: `Claro_DEF.css`) e o selecionado por padrao
+ao abrir — pra trocar o default, renomeie o sufixo pra outro arquivo.
 
 Estilos ja incluidos:
 
@@ -114,10 +211,6 @@ editar, salvar e apertar F5 no MDviu mostra o resultado na hora.
   o navegador nao entrega o caminho real do arquivo arrastado pro Delphi,
   entao o F5 depois nao conseguiria relê-lo do disco. Use duplo clique ou
   o botao "Abrir...".
-- **Destaque de texto** (`==texto==` ou `<mark>texto</mark>`) ainda nao
-  renderiza colorido: `markdown-it` nao tem suporte nativo a `==texto==`
-  (precisa de um plugin pequeno) e o app desativa HTML cru por seguranca
-  (`html: false`). Facil de ligar quando for pedido.
 - Exportar PDF so tem os dois caminhos ja prontos (dialogo Ctrl+P e
   automatico Ctrl+Shift+P) — sem conversao em lote ainda.
 
@@ -142,6 +235,39 @@ Histórico util pra nao redescobrir os mesmos problemas:
 4. **Espaco grande demais acima do primeiro titulo** — a margem de cima do
    `h1` somava com o padding do `body` (margem nao colapsa com padding).
    Corrigido com `#content > *:first-child { margin-top: 0; }` em cada CSS.
+5. **Imagem com caminho relativo nao carregava** — primeira tentativa foi
+   mapear a pasta do `.md` como host virtual do WebView2
+   (`SetVirtualHostNameToFolderMapping`), mas a pagina criada via
+   `NavigateToString` tem uma origem opaca que bloqueia os pedidos pro host
+   mapeado (falha sempre, `fetch` retorna "Failed to fetch"). Abandonado em
+   favor do `data:` URI em base64 (ver [Imagens](#imagens)). De quebra: o
+   hostname de teste usava sufixo `.local`, que o Windows tenta resolver via
+   mDNS antes do WebView2 interceptar — evitar esse sufixo em qualquer
+   tentativa futura parecida, usar `.example` (reservado p/ documentacao).
+6. **Base64 quebrando a sintaxe do markdown-it** — `TNetEncoding.Base64`
+   quebra linha a cada 76 caracteres por padrao (estilo MIME); uma quebra de
+   linha dentro do destino de uma imagem/link invalida a sintaxe do
+   CommonMark, entao a imagem aparecia como texto literal em vez de
+   renderizar. Corrigido com `TBase64Encoding.Create(0)` (0 = sem quebra).
+7. **Rolagem "vazava" entre arquivos** — como a pagina do WebView2 nunca
+   recarrega de verdade (so reinjeta o conteudo via `innerHTML`), a posicao
+   de rolagem do arquivo anterior ficava e o arquivo novo abria no meio do
+   nada. Corrigido guardando a rolagem por arquivo (`scrollPositions` em
+   `script.js`) e so restaurando no "Voltar" — arquivo novo sempre comeca
+   do topo.
+8. **Rolagem "perdia o lugar" ao trocar de estilo** — trocar pro estilo
+   Compacto (fontes/espacamento menores) deixava a posicao em pixel
+   apontando pra outro trecho do texto. Corrigido ancorando num bloco
+   (`captureScrollAnchor`/`restoreScrollAnchor` em `script.js`) em vez de
+   pixel — acha o paragrafo/titulo/etc. encostado no topo antes de trocar
+   e rola ate ele de novo depois.
+9. **Ancora de rolagem pegava o bloco errado** — a primeira versao do item 8
+   chamava `captureScrollAnchor` de dentro de `renderMD`, mas o Delphi
+   executa `setStyle(cssNovo)` **antes** de `renderMD` — ou seja, a captura
+   media o conteudo ainda ANTIGO ja com o CSS NOVO aplicado (tudo encolhido
+   de repente), achando um bloco bem mais abaixo do real (chegava a "pular"
+   pro fim do arquivo). Corrigido com `prepareScrollAnchor()`, chamado pelo
+   Delphi **antes** de `setStyle`, pra capturar com o CSS ainda antigo.
 
 ## Como compilar
 

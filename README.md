@@ -28,8 +28,8 @@ O repositorio guarda dois apps, nessa ordem de evolucao:
 
 | App | Pasta | Detalhes |
 |---|---|---|
-| MDviu (Delphi) | [MDviu_Delphi/](MDviu_Delphi/) | [MDviu_Delphi/MDviu.md](MDviu_Delphi/MDviu.md) |
-| MDviu_HTML (protótipo) | [MDviu_HTML/](MDviu_HTML/) | [MDviu_HTML/MDviu_HTML.md](MDviu_HTML/MDviu_HTML.md) |
+| MDviu (Delphi) | [MDviu_Delphi/](MDviu_Delphi/) | [MDviu.md](MDviu_Delphi/MDviu.md) |
+| MDviu_HTML (protótipo) | [MDviu_HTML/](MDviu_HTML/) | [MDviu_HTML.md](MDviu_HTML/MDviu_HTML.md) |
 
 ## Estrutura do repositorio
 
@@ -37,7 +37,8 @@ O repositorio guarda dois apps, nessa ordem de evolucao:
 MDviu/
 ├── MDviu_Delphi/       App de verdade (Delphi + WebView2)
 │   ├── MDviu.md        Detalhes deste app
-│   └── web/            CSS, script.js e markdown-it usados pelo app
+│   ├── lib/            script.js e markdown-it usados pelo app
+│   └── styles/         CSS editaveis (combo "Estilo")
 ├── MDviu_HTML/         Protótipo HTML/CSS/JS puro
 │   └── MDviu_HTML.md   Detalhes deste protótipo
 ├── AGENTS.md           Regras e contexto pra quem (ou IA) continuar o projeto

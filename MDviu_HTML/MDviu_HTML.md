@@ -43,7 +43,7 @@ fallback pra um `File` comum em navegadores sem esse suporte.
 
 Este protótipo deu origem ao [MDviu (Delphi)](../MDviu_Delphi/MDviu.md), o
 app de verdade da familia. O `style.css` inicial foi a base dos estilos
-`web\styles\*.css` de lá, mas os dois CSS **divergiram** — este arquivo
+`styles\*.css` de lá, mas os dois CSS **divergiram** — este arquivo
 continua sendo mantido so como referencia/protótipo de CSS, nao recebe
 mais as funcionalidades novas (toolbar, multiplos estilos, PDF, etc.).
 

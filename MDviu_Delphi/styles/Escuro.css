@@ -40,7 +40,7 @@ body {
 h1 {
     font-size: 2.1em;
     margin: 1.2em 0 0.6em 0;
-    border-bottom: 2px solid #d8d8d8;
+    border-bottom: 1px solid #d8d8d8;
     padding-bottom: 0.2em;
 }
 
@@ -184,8 +184,9 @@ mark {
 
 /* -------------------------------------------------------------------------
    9. REGUA HORIZONTAL (<hr>, "---" no markdown)
-   Mesma espessura da linha sob o titulo principal (h1, secao 2) + espaco
-   automatico de ~2 linhas de texto acima e abaixo.
+   Mais grossa que a linha sob o h1 (secao 2) de proposito — e o separador
+   usado pra marcar visualmente a quebra entre secoes, tem que aparecer bem.
+   Espaco automatico de ~2 linhas de texto acima e abaixo.
 
    Calculo do espaco: 2 linhas x line-height (1.6, definido no body) = 3.2em
    Troque o "2" por outro numero de linhas e recalcule (linhas x 1.6).

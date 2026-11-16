@@ -8,7 +8,7 @@ uses
   Vcl.Edge, Winapi.WebView2, System.IOUtils, System.JSON, Vcl.ActnList,
   Vcl.Menus, System.Actions, Vcl.StdCtrls, Vcl.ExtCtrls, System.Generics.Collections,
   Vcl.Themes, Vcl.Styles, System.StrUtils, Winapi.ShellAPI, Vcl.Buttons,
-  System.NetEncoding;
+  System.NetEncoding, System.RegularExpressions;
 
 const
   // Sufixo que marca qual arquivo de web\styles\*.css e o default (selecionado
@@ -50,19 +50,26 @@ type
     BtnPrint: TColoredSpeedButton;
     BtnExportPdf: TColoredSpeedButton;
     ChkNewWindow: TCheckBox;
+    ChkHtml: TCheckBox;
     OpenDialog1: TOpenDialog;
 
     FCurrentMDPath: string;    // caminho do .md atualmente aberto
     FHistory: TStringList;     // pilha de arquivos visitados, pro botao "Voltar"
-    FWebFolder: string;        // pasta "web" ao lado do .exe (script.js, lib\, styles\)
-    FStylesFolder: string;     // web\styles\ — cada arquivo .css de dentro vira uma opcao
-    FCurrentStyleName: string; // nome do estilo selecionado (sem ".css")
+    FWebFolder: string;        // pasta do .exe (lib\, styles\ moram direto nela)
+    FStylesFolder: string;     // styles\ — cada arquivo .css de dentro vira uma opcao
+    FCurrentStyleName: string; // nome do ARQUIVO do estilo selecionado (sem ".css", com "_DEF" se tiver)
+    FStyleFileNames: TStringList; // nome de arquivo de cada item da combo, na mesma ordem/indice —
+                                   // a combo mostra o nome sem "_DEF" (so estetica), o arquivo no disco mantem o sufixo
 
     procedure PopulateStyles;
     procedure BuildShellAndNavigate;
-    procedure RenderCurrentFile;
+    procedure RenderCurrentFile(AIsBack: Boolean = False);
+    function InlineLocalImages(const AMdText: string): string;
+    function ImageToDataUri(const AImgPath: string): string;
+    function ImageMatchEvaluator(const AMatch: TMatch): string;
     function ReadWebFile(const AFileName: string): string;
     procedure ComboStylesChange(Sender: TObject);
+    procedure ChkHtmlClick(Sender: TObject);
     procedure LaunchNewMDviuWindow(const AFilePath: string);
     procedure OpenRelatedMdFile(const AHref: string);
 
@@ -152,12 +159,13 @@ begin
   LoadAppStyle;
   Caption := 'MDviu';
   FHistory := TStringList.Create;
+  FStyleFileNames := TStringList.Create;
 
   var IconPath := ExtractFilePath(ParamStr(0)) + 'mdviu.ico';
   if TFile.Exists(IconPath) then
     Icon.LoadFromFile(IconPath);
 
-  FWebFolder := IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0))) + 'web\';
+  FWebFolder := IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0)));
   FStylesFolder := FWebFolder + 'styles\';
 
   if ParamCount >= 1 then
@@ -213,8 +221,17 @@ begin
   ChkNewWindow.Caption := 'Nova janela';
   ChkNewWindow.Left := BtnLeft + 12;
   ChkNewWindow.Top := 8;
-  ChkNewWindow.Width := 110;
+  ChkNewWindow.Width := 95;
   ChkNewWindow.Checked := False; // link p/ outro .md navega na mesma janela por padrao (use "Voltar")
+
+  ChkHtml := TCheckBox.Create(Self);
+  ChkHtml.Parent := PanelTop;
+  ChkHtml.Caption := 'HTML';
+  ChkHtml.Left := ChkNewWindow.Left + ChkNewWindow.Width + 6;
+  ChkHtml.Top := 8;
+  ChkHtml.Width := 60;
+  ChkHtml.Checked := False; // HTML cru no .md desligado por padrao (seguranca); reseta a cada arquivo novo
+  ChkHtml.OnClick := ChkHtmlClick;
 
   OpenDialog1 := TOpenDialog.Create(Self);
   OpenDialog1.Filter := 'Arquivos Markdown (*.md)|*.md|Todos os arquivos (*.*)|*.*';
@@ -273,38 +290,48 @@ end;
 procedure TFormMain.PopulateStyles;
 var
   Files: TArray<string>;
-  FileName: string;
+  FileName, ActualName, DisplayName: string;
   DefaultIndex: Integer;
 begin
   ComboStyles.Items.BeginUpdate;
   try
     ComboStyles.Items.Clear;
+    FStyleFileNames.Clear;
     if TDirectory.Exists(FStylesFolder) then
     begin
       Files := TDirectory.GetFiles(FStylesFolder, '*.css');
       TArray.Sort<string>(Files);
       for FileName in Files do
-        ComboStyles.Items.Add(TPath.GetFileNameWithoutExtension(FileName));
+      begin
+        ActualName := TPath.GetFileNameWithoutExtension(FileName);
+        DisplayName := ActualName;
+        if EndsText(DEFAULT_STYLE_SUFFIX, ActualName) then
+          DisplayName := Copy(ActualName, 1, Length(ActualName) - Length(DEFAULT_STYLE_SUFFIX));
+
+        ComboStyles.Items.Add(DisplayName);
+        FStyleFileNames.Add(ActualName);
+      end;
     end;
   finally
     ComboStyles.Items.EndUpdate;
   end;
 
-  // O default e quem tem o sufixo "_DEF" no nome (ex.: "Claro_DEF").
+  // O default e quem tem o sufixo "_DEF" no nome do ARQUIVO (ex.: "Claro_DEF"),
+  // mesmo a combo ja nao mostrando mais o sufixo.
   DefaultIndex := -1;
-  for var I := 0 to ComboStyles.Items.Count - 1 do
-    if EndsText(DEFAULT_STYLE_SUFFIX, ComboStyles.Items[I]) then
+  for var I := 0 to FStyleFileNames.Count - 1 do
+    if EndsText(DEFAULT_STYLE_SUFFIX, FStyleFileNames[I]) then
     begin
       DefaultIndex := I;
       Break;
     end;
-  if (DefaultIndex < 0) and (ComboStyles.Items.Count > 0) then
+  if (DefaultIndex < 0) and (FStyleFileNames.Count > 0) then
     DefaultIndex := 0;
 
   if DefaultIndex >= 0 then
   begin
     ComboStyles.ItemIndex := DefaultIndex;
-    FCurrentStyleName := ComboStyles.Items[DefaultIndex];
+    FCurrentStyleName := FStyleFileNames[DefaultIndex];
   end;
 end;
 
@@ -312,8 +339,13 @@ procedure TFormMain.ComboStylesChange(Sender: TObject);
 begin
   if ComboStyles.ItemIndex < 0 then
     Exit;
-  FCurrentStyleName := ComboStyles.Items[ComboStyles.ItemIndex];
+  FCurrentStyleName := FStyleFileNames[ComboStyles.ItemIndex];
   RenderCurrentFile;
+end;
+
+procedure TFormMain.ChkHtmlClick(Sender: TObject);
+begin
+  RenderCurrentFile; // so re-renderiza o arquivo atual com o novo estado do HTML cru
 end;
 
 function TFormMain.ReadWebFile(const AFileName: string): string;
@@ -334,7 +366,7 @@ begin
   // Protecao: um "</script" literal dentro do JS embutido fecharia a tag mais cedo.
   MarkdownItJs := StringReplace(ReadWebFile('lib\markdown-it.min.js'), '</script',
     '<\/script', [rfReplaceAll, rfIgnoreCase]);
-  ScriptJs := StringReplace(ReadWebFile('script.js'), '</script', '<\/script',
+  ScriptJs := StringReplace(ReadWebFile('lib\script.js'), '</script', '<\/script',
     [rfReplaceAll, rfIgnoreCase]);
 
   Shell :=
@@ -342,9 +374,7 @@ begin
     '<html lang="pt-BR"><head><meta charset="UTF-8"><title>MDviu</title>' +
     '<style id="user-style"></style>' +
     '</head><body>' +
-    '<div id="content"><p style="text-align:center;color:#888;margin-top:4em;">' +
-    'Abra um arquivo .md com o MDviu (associe a extensao .md a este programa nas ' +
-    'propriedades do Windows, em "Abrir com").</p></div>' +
+    '<div id="content"></div>' +
     '<script>' + MarkdownItJs + '</script>' +
     '<script>' + ScriptJs + '</script>' +
     '</body></html>';
@@ -352,11 +382,91 @@ begin
   EdgeBrowser1.NavigateToString(Shell);
 end;
 
-procedure TFormMain.RenderCurrentFile;
+// Imagem com caminho relativo (![alt](foo.jpg)) nao carrega sozinha depois de
+// NavigateToString — o WebView2 nao tem "pasta atual" de disco pra resolver
+// contra (tentativa anterior com host virtual esbarrou na origem opaca que
+// NavigateToString da a pagina, que bloqueia os pedidos de rede do host
+// mapeado). Solucao mais simples e robusta: o proprio Delphi le a imagem do
+// disco e embute como data: URI (base64) direto no texto do .md antes de
+// mandar pro JS — nao depende de rede, CORS ou origem nenhuma.
+function TFormMain.ImageToDataUri(const AImgPath: string): string;
+const
+  MimeExts: array[0..6] of string = ('.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.bmp');
+  MimeTypes: array[0..6] of string = ('image/jpeg', 'image/jpeg', 'image/png', 'image/gif',
+    'image/svg+xml', 'image/webp', 'image/bmp');
+var
+  Decoded, FullPath, Ext, Mime: string;
+  Bytes: TBytes;
+  I, MimeIndex: Integer;
+  Encoder: TBase64Encoding;
+begin
+  Result := '';
+  Decoded := TNetEncoding.URL.Decode(AImgPath);
+
+  if TPath.IsPathRooted(Decoded) then
+    FullPath := Decoded
+  else
+    FullPath := TPath.GetFullPath(TPath.Combine(ExtractFilePath(FCurrentMDPath), Decoded));
+
+  if not TFile.Exists(FullPath) then
+    Exit;
+
+  Ext := LowerCase(ExtractFileExt(FullPath));
+  MimeIndex := -1;
+  for I := Low(MimeExts) to High(MimeExts) do
+    if MimeExts[I] = Ext then
+    begin
+      MimeIndex := I;
+      Break;
+    end;
+  if MimeIndex < 0 then
+    Exit; // extensao desconhecida — deixa o <img> como estava (vai so nao carregar)
+
+  Mime := MimeTypes[MimeIndex];
+  Bytes := TFile.ReadAllBytes(FullPath);
+
+  // TNetEncoding.Base64 default quebra linha a cada 76 chars (estilo MIME) —
+  // isso dentro de "data:...;base64,XXX" quebraria a sintaxe do markdown-it
+  // (destino de link/imagem nao pode ter quebra de linha). CharsPerLine=0 = sem quebra.
+  Encoder := TBase64Encoding.Create(0);
+  try
+    Result := 'data:' + Mime + ';base64,' + Encoder.EncodeBytesToString(Bytes);
+  finally
+    Encoder.Free;
+  end;
+end;
+
+function TFormMain.ImageMatchEvaluator(const AMatch: TMatch): string;
+var
+  UrlPart, DataUri: string;
+begin
+  UrlPart := AMatch.Groups[2].Value;
+  // ja e absoluto (http(s)://, data:, etc.) — nao mexe
+  if TRegEx.IsMatch(UrlPart, '^[a-zA-Z][a-zA-Z0-9+.-]*:') or UrlPart.StartsWith('//') then
+    Exit(AMatch.Value);
+
+  DataUri := ImageToDataUri(UrlPart);
+  if DataUri = '' then
+    Exit(AMatch.Value); // arquivo nao encontrado ou extensao desconhecida
+
+  Result := AMatch.Groups[1].Value + DataUri + AMatch.Groups[3].Value;
+end;
+
+function TFormMain.InlineLocalImages(const AMdText: string): string;
+begin
+  Result := TRegEx.Replace(AMdText, '(!\[[^\]]*\]\()([^)\s]+)(\))', ImageMatchEvaluator);
+end;
+
+procedure TFormMain.RenderCurrentFile(AIsBack: Boolean);
 var
   MdText, FileName, Css: string;
 begin
   try
+    // Tem que capturar a posicao de rolagem ANTES de trocar o CSS — setStyle
+    // muda tamanhos/espacamentos na hora, no conteudo ainda antigo; capturar
+    // depois mediria o conteudo errado (CSS novo com texto velho).
+    EdgeBrowser1.ExecuteScript('prepareScrollAnchor(' + JsStringLiteral(FCurrentMDPath) + ');');
+
     if FCurrentStyleName <> '' then
       Css := ReadWebFile('styles\' + FCurrentStyleName + '.css')
     else
@@ -373,10 +483,12 @@ begin
     end;
 
     MdText := TFile.ReadAllText(FCurrentMDPath);
+    MdText := InlineLocalImages(MdText);
     FileName := ExtractFileName(FCurrentMDPath);
 
     EdgeBrowser1.ExecuteScript('renderMD(' + JsStringLiteral(MdText) + ', ' +
-      JsStringLiteral(FileName) + ');');
+      JsStringLiteral(FileName) + ', ' + IfThen(ChkHtml.Checked, 'true', 'false') + ', ' +
+      JsStringLiteral(FCurrentMDPath) + ', ' + IfThen(AIsBack, 'true', 'false') + ');');
 
     Caption := 'MDviu - ' + FileName;
   except
@@ -470,6 +582,7 @@ begin
   if FCurrentMDPath <> '' then
     FHistory.Add(FCurrentMDPath);
   FCurrentMDPath := TargetPath;
+  ChkHtml.Checked := False; // HTML cru reseta a cada arquivo novo (seguranca)
   RenderCurrentFile;
 end;
 
@@ -544,7 +657,8 @@ begin
     Exit;
   FCurrentMDPath := FHistory[FHistory.Count - 1];
   FHistory.Delete(FHistory.Count - 1);
-  RenderCurrentFile;
+  ChkHtml.Checked := False; // HTML cru reseta a cada arquivo novo (seguranca)
+  RenderCurrentFile(True); // "Voltar" restaura a posicao de rolagem de onde estava
 end;
 
 // Botao/Ctrl+O — abre o seletor de arquivo nativo do Windows, alternativa ao
@@ -557,6 +671,7 @@ begin
   if FCurrentMDPath <> '' then
     FHistory.Add(FCurrentMDPath);
   FCurrentMDPath := OpenDialog1.FileName;
+  ChkHtml.Checked := False; // HTML cru reseta a cada arquivo novo (seguranca)
   RenderCurrentFile;
 end;
 

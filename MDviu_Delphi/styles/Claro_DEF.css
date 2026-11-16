@@ -1,7 +1,13 @@
 /* =========================================================================
-   MDviu — folha de estilo "Compacto"
-   Mesma estrutura do "Espacoso", mas com fontes e espacamentos menores —
-   prioriza caber mais conteudo na tela em vez de respiro entre os blocos.
+   MDviu — folha de estilo "Claro_DEF"
+   O sufixo "_DEF" marca este como o estilo padrao (selecionado ao abrir,
+   antes de voce escolher outro na caixinha "Estilo" no topo do programa).
+   Para trocar o default, renomeie o "_DEF" para outro arquivo .css desta
+   pasta (so um arquivo deve ter o sufixo por vez).
+
+   Cada secao abaixo controla UM elemento. Edite os valores, salve, e
+   aperte F5 na janela do MDviu para ver o resultado (rele o .md e o
+   estilo selecionado direto do disco).
    ========================================================================= */
 
 /* -------------------------------------------------------------------------
@@ -11,11 +17,11 @@ body {
     background-color: #ffffff;
     color: #1a1a1a;
     font-family: "Segoe UI", Calibri, Arial, sans-serif;
-    font-size: 15px;
-    line-height: 1.35;          /* usado tambem no calculo de espaco da <hr>, ver secao 8 */
-    max-width: 900px;
+    font-size: 17px;
+    line-height: 1.6;           /* usado tambem no calculo de espaco da <hr>, ver secao 8 */
+    max-width: 860px;           /* largura maxima do texto, deixa confortavel de ler */
     margin: 0 auto;
-    padding: 1em 1.5em;
+    padding: 2.5em 2em;
 }
 
 /* Sem isso, a margem de cima do primeiro elemento (normalmente o h1) soma
@@ -24,52 +30,53 @@ body {
     margin-top: 0;
 }
 
+/* Tela inicial, antes de soltar um arquivo .md */
 #dropzone-msg {
     text-align: center;
     color: #888888;
-    font-size: 1.05em;
-    margin-top: 2em;
+    font-size: 1.1em;
+    margin-top: 4em;
     border: 2px dashed #cccccc;
-    border-radius: 6px;
-    padding: 1.5em 1em;
+    border-radius: 8px;
+    padding: 3em 1em;
 }
 
 /* -------------------------------------------------------------------------
    2. TITULOS (headers) — h1 a h6
    ------------------------------------------------------------------------- */
 h1 {
-    font-size: 1.8em;
-    margin: 0.6em 0 0.3em 0;
-    border-bottom: 2px solid #1a1a1a;
-    padding-bottom: 0.1em;
+    font-size: 2.1em;
+    margin: 1.2em 0 0.6em 0;
+    border-bottom: 1px solid #1a1a1a;   /* linha fina sob o titulo principal */
+    padding-bottom: 0.2em;
 }
 
 h2 {
-    font-size: 1.45em;
-    margin: 0.6em 0 0.25em 0;
+    font-size: 1.7em;
+    margin: 1.2em 0 0.5em 0;
     border-bottom: 1px solid #cccccc;
-    padding-bottom: 0.1em;
+    padding-bottom: 0.15em;
 }
 
 h3 {
-    font-size: 1.2em;
-    margin: 0.5em 0 0.2em 0;
+    font-size: 1.4em;
+    margin: 1.1em 0 0.4em 0;
 }
 
 h4 {
-    font-size: 1.08em;
-    margin: 0.5em 0 0.2em 0;
+    font-size: 1.2em;
+    margin: 1em 0 0.4em 0;
 }
 
 h5 {
-    font-size: 1em;
-    margin: 0.5em 0 0.15em 0;
+    font-size: 1.05em;
+    margin: 1em 0 0.3em 0;
     font-weight: bold;
 }
 
 h6 {
-    font-size: 0.92em;
-    margin: 0.5em 0 0.15em 0;
+    font-size: 0.95em;
+    margin: 1em 0 0.3em 0;
     font-weight: bold;
     color: #555555;
 }
@@ -78,11 +85,12 @@ h6 {
    3. PARAGRAFOS — espaco entre blocos de texto (como "pular uma linha")
    ------------------------------------------------------------------------- */
 p {
-    margin: 0 0 0.6em 0;    /* aumente este numero (em "em") para mais espaco entre paragrafos */
+    margin: 0 0 1.4em 0;    /* aumente este numero (em "em") para mais espaco entre paragrafos */
 }
 
 /* -------------------------------------------------------------------------
    4. LINKS — internos (ex.: #secao, arquivo relativo) e externos (http/https)
+   O script.js classifica cada link automaticamente com uma destas classes.
    ------------------------------------------------------------------------- */
 a.internal-link {
     color: #0b5fa5;
@@ -95,7 +103,7 @@ a.external-link {
 }
 
 a.external-link::after {
-    content: " \2197";
+    content: " \2197";      /* pequena seta indicando link externo */
     font-size: 0.8em;
 }
 
@@ -110,24 +118,24 @@ img {
     max-width: 100%;
     height: auto;
     display: block;
-    margin: 0.5em auto;
-    border-radius: 3px;
+    margin: 1em auto;
+    border-radius: 4px;
 }
 
 /* -------------------------------------------------------------------------
    6. TABELAS — bordas finas pretas em tudo, pouco padding (prioriza leitura)
    ------------------------------------------------------------------------- */
 table {
-    border-collapse: collapse;
+    border-collapse: collapse;   /* importante: sem isso as bordas duplicam e ficam grossas */
     width: 100%;
-    margin: 0.7em 0;
-    font-size: 0.92em;
+    margin: 1.5em 0;
+    font-size: 0.95em;
 }
 
 th,
 td {
-    border: 1px solid #000000;
-    padding: 0.15em 0.4em;      /* ajuste aqui para mais/menos respiro dentro da celula */
+    border: 1px solid #000000;   /* linha preta fina em todas as bordas */
+    padding: 0.35em 0.6em;       /* ajuste aqui para mais/menos respiro dentro da celula */
     text-align: left;
 }
 
@@ -142,25 +150,26 @@ th {
 pre {
     background-color: #f5f5f5;
     border: 1px solid #dddddd;
-    border-radius: 3px;
-    padding: 0.6em;
+    border-radius: 4px;
+    padding: 1em;
     overflow-x: auto;
-    margin: 0.7em 0;
+    margin: 1.5em 0;
 }
 
 pre code {
-    font-family: Consolas, "Courier New", monospace;
-    font-size: 0.88em;
+    font-family: Consolas, "Courier New", monospace;   /* fonte de largura fixa */
+    font-size: 0.9em;
     background: none;
     padding: 0;
 }
 
 code {
     font-family: Consolas, "Courier New", monospace;
-    background-color: #f0f0f0;
-    padding: 0.05em 0.3em;
+    background-color: #f0f0ff;
+    color: #1565e0;
+    padding: 0.1em 0.35em;
     border-radius: 3px;
-    font-size: 0.88em;
+    font-size: 0.9em;
 }
 
 /* -------------------------------------------------------------------------
@@ -181,13 +190,15 @@ mark {
 
 /* -------------------------------------------------------------------------
    9. REGUA HORIZONTAL (<hr>, "---" no markdown)
-   Divisoria forte + espaco automatico de ~1 linha de texto acima e abaixo
-   (no "Espacoso" sao 3 linhas — aqui e soma proposital bem menor).
+   Mais grossa que a linha sob o h1 (secao 2) de proposito — e o separador
+   usado pra marcar visualmente a quebra entre secoes, tem que aparecer bem.
+   Espaco automatico de ~2 linhas de texto acima e abaixo.
 
-   Calculo do espaco: 1 linha x line-height (1.35, definido no body) = 1.35em
+   Calculo do espaco: 2 linhas x line-height (1.6, definido no body) = 3.2em
+   Troque o "2" por outro numero de linhas e recalcule (linhas x 1.6).
    ------------------------------------------------------------------------- */
 hr {
     border: none;
     border-top: 2px solid #1a1a1a;
-    margin: 1.35em 0;
+    margin: 3.2em 0;    /* 2 linhas de espaco acima E abaixo */
 }

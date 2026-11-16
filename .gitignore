@@ -4,6 +4,7 @@
 *.map
 *.drc
 *.dres
+*.res
 *.identcache
 *.local
 *.tvsconfig
@@ -15,7 +16,5 @@ Win64/
 mdviu_debug.log
 
 # Arquivos de teste manual (nao sao parte do produto, ver AGENTS.md)
-/MDviu_Delphi/teste*.md
-/MDviu_Delphi/pagina_*.md
-/MDviu_Delphi/subpasta/
+/testes/
 /MDviu_Delphi/*.pdf
