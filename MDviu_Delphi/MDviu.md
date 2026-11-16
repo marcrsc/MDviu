@@ -110,6 +110,13 @@ Voltar).
   a pasta do arquivo atual e abre — na mesma janela (empilhando o arquivo
   atual pro botao "Voltar") ou numa janela nova do MDviu, conforme a caixa
   "Nova janela".
+- **Link combinando arquivo + ancora** (`[texto](outro.md#secao)`): o
+  Delphi separa a ancora do caminho ANTES de resolver/abrir o arquivo
+  (`ExtractAnchor` em `uMain.pas`) — sem isso, tentaria abrir um arquivo
+  chamado literalmente `outro.md#secao` e falhar com "arquivo nao
+  encontrado". Depois de abrir `outro.md`, rola ate o titulo com aquele id
+  (`FPendingAnchor`, usado tanto ao trocar de arquivo na mesma janela quanto
+  ao abrir pela linha de comando/"Nova janela").
 - **Link externo** (`http://`, `https://`, `mailto:`): sempre abre no
   navegador padrao do Windows (`ShellExecute`), nunca dentro do MDviu — o
   WebView2 sinaliza isso via `NewWindowRequested`, que o Delphi sempre
@@ -268,6 +275,12 @@ Histórico util pra nao redescobrir os mesmos problemas:
    de repente), achando um bloco bem mais abaixo do real (chegava a "pular"
    pro fim do arquivo). Corrigido com `prepareScrollAnchor()`, chamado pelo
    Delphi **antes** de `setStyle`, pra capturar com o CSS ainda antigo.
+10. **Link "arquivo.md#secao" nao abria** — a ancora ficava grudada no
+    caminho na hora de resolver/checar o arquivo, entao tentava abrir um
+    arquivo chamado literalmente "arquivo.md#secao" e dava "arquivo nao
+    encontrado". Corrigido separando a ancora do caminho antes de tudo
+    (`ExtractAnchor`), guardando-a (`FPendingAnchor`) pra rolar ate o
+    titulo certo depois que o arquivo novo renderizar.
 
 ## Como compilar
 

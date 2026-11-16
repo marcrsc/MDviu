@@ -54,6 +54,7 @@ type
     OpenDialog1: TOpenDialog;
 
     FCurrentMDPath: string;    // caminho do .md atualmente aberto
+    FPendingAnchor: string;    // id de titulo pra rolar ate depois do proximo render (link "arquivo.md#secao")
     FHistory: TStringList;     // pilha de arquivos visitados, pro botao "Voltar"
     FWebFolder: string;        // pasta do .exe (lib\, styles\ moram direto nela)
     FStylesFolder: string;     // styles\ — cada arquivo .css de dentro vira uma opcao
@@ -111,6 +112,21 @@ begin
   finally
     J.Free;
   end;
+end;
+
+// Separa "arquivo.md#ancora" em "arquivo.md" (fica em APath) e "ancora" (retorno,
+// sem o "#"). Sem "#" no caminho, retorna '' e deixa APath intacto. Precisa disso
+// pra link tipo "[texto](outro.md#secao)" nao tentar abrir um arquivo chamado
+// literalmente "outro.md#secao" (que nao existe).
+function ExtractAnchor(var APath: string): string;
+var
+  HashPos: Integer;
+begin
+  HashPos := Pos('#', APath);
+  if HashPos = 0 then
+    Exit('');
+  Result := Copy(APath, HashPos + 1, MaxInt);
+  APath := Copy(APath, 1, HashPos - 1);
 end;
 
 // Cria e posiciona um botao flat da barra superior, avancando ALeft pro proximo.
@@ -172,6 +188,7 @@ begin
     FCurrentMDPath := ParamStr(1)
   else
     FCurrentMDPath := '';
+  FPendingAnchor := ExtractAnchor(FCurrentMDPath);
 
   // Barra superior com o seletor de estilo
   PanelTop := TPanel.Create(Self);
@@ -490,6 +507,16 @@ begin
       JsStringLiteral(FileName) + ', ' + IfThen(ChkHtml.Checked, 'true', 'false') + ', ' +
       JsStringLiteral(FCurrentMDPath) + ', ' + IfThen(AIsBack, 'true', 'false') + ');');
 
+    // Link tipo "outro.md#secao": depois de renderizar o arquivo novo (que ja
+    // rolou pro topo), rola ate o titulo com esse id — igual a ancora #secao
+    // faz na mesma pagina, so que cruzando arquivo.
+    if FPendingAnchor <> '' then
+    begin
+      EdgeBrowser1.ExecuteScript('var __el = document.getElementById(' +
+        JsStringLiteral(FPendingAnchor) + '); if (__el) __el.scrollIntoView();');
+      FPendingAnchor := '';
+    end;
+
     Caption := 'MDviu - ' + FileName;
   except
     on E: Exception do
@@ -556,11 +583,15 @@ end;
 // conforme a caixinha "Nova janela".
 procedure TFormMain.OpenRelatedMdFile(const AHref: string);
 var
-  DecodedHref, TargetPath: string;
+  DecodedHref, TargetPath, Anchor: string;
 begin
   // O markdown-it codifica a URL do link (ex.: "\" vira "%5C") — decodifica
   // antes de resolver o caminho, senao "..\arquivo.md" nao seria encontrado.
   DecodedHref := TNetEncoding.URL.Decode(AHref);
+
+  // "outro.md#secao": a ancora tem que sair ANTES de resolver/checar o
+  // arquivo, senao tenta abrir um arquivo chamado literalmente "outro.md#secao".
+  Anchor := ExtractAnchor(DecodedHref);
 
   if FCurrentMDPath <> '' then
     TargetPath := TPath.GetFullPath(TPath.Combine(ExtractFilePath(FCurrentMDPath), DecodedHref))
@@ -575,9 +606,14 @@ begin
 
   if ChkNewWindow.Checked then
   begin
-    LaunchNewMDviuWindow(TargetPath);
+    if Anchor <> '' then
+      LaunchNewMDviuWindow(TargetPath + '#' + Anchor)
+    else
+      LaunchNewMDviuWindow(TargetPath);
     Exit;
   end;
+
+  FPendingAnchor := Anchor;
 
   if FCurrentMDPath <> '' then
     FHistory.Add(FCurrentMDPath);

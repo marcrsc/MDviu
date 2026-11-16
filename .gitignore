@@ -5,6 +5,7 @@
 *.drc
 *.dres
 *.res
+*.rsm
 *.identcache
 *.local
 *.tvsconfig
