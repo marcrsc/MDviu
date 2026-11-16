@@ -8,6 +8,7 @@ construido em Delphi (RAD Studio 37.0) usando `TEdgeBrowser` (WebView2).
 - [Visao geral](#visao-geral)
 - [Requisitos](#requisitos)
 - [Arquivos que acompanham o exe](#arquivos-que-acompanham-o-exe)
+- [Bibliotecas de terceiros](#bibliotecas-de-terceiros)
 - [Arquitetura](#arquitetura)
 - [Barra de ferramentas e atalhos](#barra-de-ferramentas-e-atalhos)
 - [Como funcionam os links](#como-funcionam-os-links)
@@ -15,6 +16,8 @@ construido em Delphi (RAD Studio 37.0) usando `TEdgeBrowser` (WebView2).
 - [Html cru opcional](#html-cru-opcional)
 - [Quebras de linha](#quebras-de-linha)
 - [Imagens](#imagens)
+- [Destaque de sintaxe em blocos de codigo](#destaque-de-sintaxe-em-blocos-de-codigo)
+- [Abrir codigo fonte direto](#abrir-codigo-fonte-direto)
 - [Estilos css editaveis](#estilos-css-editaveis)
 - [Limitacoes conhecidas](#limitacoes-conhecidas)
 - [Bugs importantes ja corrigidos](#bugs-importantes-ja-corrigidos)
@@ -44,7 +47,21 @@ Todos estes arquivos moram ao lado de `MDviu.exe` e sao obrigatorios:
 | `mdviu.ico` | Icone do programa |
 | `lib\script.js` | Logica de renderizacao (markdown-it, links, titulos) |
 | `lib\markdown-it.min.js` | Biblioteca de conversao Markdown -> HTML |
+| `lib\highlight.min.js` | Destaque de sintaxe em bloco de codigo (ver [Destaque de sintaxe em blocos de codigo](#destaque-de-sintaxe-em-blocos-de-codigo)) |
+| `lib\highlight-light.min.css` / `lib\highlight-dark.min.css` | Tema de cor do highlight.js, claro e escuro — NAO aparecem na combo "Estilo" por estarem em `lib\`, nao em `styles\` |
 | `styles\*.css` | Um arquivo por estilo disponivel na combo "Estilo" |
+
+## Bibliotecas de terceiros
+
+Todas rodam 100% client-side dentro do WebView2 (sem rede em tempo de uso) —
+embutidas inline no HTML por `BuildShellAndNavigate` em `uMain.pas`, igual
+descrito em [Arquitetura](#arquitetura).
+
+| Biblioteca | Versao | Site / onde baixar | Licenca |
+|---|---|---|---|
+| markdown-it | 14.1.0 | <https://github.com/markdown-it/markdown-it> — build minificado via jsDelivr/unpkg: `https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js` | MIT |
+| highlight.js | 11.12.0 | <https://highlightjs.org/download> — build customizado com "Select all languages" (repositorio: <https://github.com/highlightjs/highlight.js>) | BSD-3-Clause |
+| Temas highlight.js ("Default" / "GitHub Dark") | 11.12.0 | Incluidos no mesmo build de `highlight.js` acima, pasta `styles/` do zip | BSD-3-Clause |
 
 ## Arquitetura
 
@@ -68,7 +85,7 @@ Fluxo de carregamento:
 
 | Botao | Atalho | Acao |
 |---|---|---|
-| Abrir... | Ctrl+O | Abre outro `.md` (dialogo nativo do Windows) |
+| Abrir... | Ctrl+O | Abre outro `.md` (ou arquivo de codigo-fonte, dialogo nativo do Windows — ver [Abrir codigo fonte direto](#abrir-codigo-fonte-direto)) |
 | Voltar | Alt+Backspace | Reabre o arquivo imediatamente anterior, restaurando a posicao de rolagem de onde estava |
 | Topo | — | Rola o conteudo de volta pro inicio |
 | Atualizar | F5 | Rele o `.md` e o CSS selecionado do disco, sem mexer na rolagem atual |
@@ -109,7 +126,9 @@ Voltar).
   `window.chrome.webview.postMessage`. O Delphi resolve o caminho relativo
   a pasta do arquivo atual e abre — na mesma janela (empilhando o arquivo
   atual pro botao "Voltar") ou numa janela nova do MDviu, conforme a caixa
-  "Nova janela".
+  "Nova janela". Nao faz distincao de extensao: um link pra um arquivo de
+  codigo-fonte (`.pas`, `.py` etc.) abre com highlight em vez de Markdown —
+  ver [Abrir codigo fonte direto](#abrir-codigo-fonte-direto).
 - **Link combinando arquivo + ancora** (`[texto](outro.md#secao)`): o
   Delphi separa a ancora do caminho ANTES de resolver/abrir o arquivo
   (`ExtractAnchor` em `uMain.pas`) — sem isso, tentaria abrir um arquivo
@@ -193,6 +212,77 @@ por varias linhas em branco):
   sintaxe Markdown (`![alt](caminho)`), nao mexe em HTML cru — um
   `<img src="relativo.jpg">` cru so carrega se o caminho for absoluto
   (`http://`/`https://`).
+
+## Destaque de sintaxe em blocos de codigo
+
+Bloco de codigo com linguagem (` ```pascal `, ` ```python `, etc.) ganha cor
+via highlight.js (ver [Bibliotecas de terceiros](#bibliotecas-de-terceiros)),
+build completo — todas as linguagens da lib, inclusive `delphi`/`pascal` e
+`vbscript-html` (alias `asp`).
+
+- **Liga/desliga**: constante `ENABLE_SYNTAX_HIGHLIGHT` no topo do
+  `lib\script.js` — sem interface pra isso, so trocar o valor e recompilar.
+  Desligado (ou linguagem nao reconhecida pela lib), o bloco volta a aparecer
+  sem cor, como antes dessa funcionalidade existir.
+- **Tema claro/escuro**: cada CSS em `styles\` declara, perto do topo, uma
+  variavel `--mdviu-theme: light;` ou `--mdviu-theme: dark;` dentro de um
+  `:root { }`. A funcao `setStyle()` do `script.js` le essa variavel a cada
+  troca de estilo e liga o `<style>` de highlight correspondente
+  (`lib\highlight-light.min.css` ou `lib\highlight-dark.min.css`, embutidos
+  no Shell desde o inicio, so um dos dois fica ativo por vez) — os 3 CSS do
+  projeto continuam do jeito que estavam, so essa variavel a mais.
+- **Cor de cada "token"**: base nos dois temas padrao da propria lib
+  ("Default" claro, "GitHub Dark" escuro — `lib\highlight-light.min.css` /
+  `lib\highlight-dark.min.css`), com ajustes manuais feitos depois (ver
+  backup do original em `lib\highlight-light_orig.css` /
+  `lib\highlight-dark_orig.css`):
+  - Palavra reservada (`.hljs-keyword` — `var`, `begin`, `if`, `procedure`
+    etc.): branco no tema escuro (era vermelho claro); tema claro
+    inalterado.
+  - Nome de classe/funcao (`.hljs-title`): azul forte nos dois temas (era
+    vermelho escuro no claro, roxo claro no escuro).
+  - Comentario (`.hljs-comment`): vermelho puro em negrito nos dois temas
+    (era cinza).
+  - Numero e string (`.hljs-number`, `.hljs-string`): roxo nos dois temas.
+  - Resto dos tokens (operador, atributo, tipo, etc.) continua como veio da
+    lib.
+
+## Abrir codigo fonte direto
+
+Arquivo com extensao reconhecida (tabela abaixo) abre direto como bloco de
+codigo com highlight (`renderSource` em `script.js`), SEM passar pelo
+markdown-it — nao interpreta `==`, `_`, tabela etc. dentro do arquivo, mostra
+o conteudo inteiro como esta no disco. `LanguageForExtension` (`uMain.pas`)
+decide isso pela extensao do arquivo, nao importa como foi aberto:
+
+- **Botao "Abrir..."**: o dialogo tem 3 opcoes em "Tipo" — "Arquivos Markdown
+  (\*.md)" (**default**, igual sempre foi), "Linguagens" (filtra so as
+  extensoes da tabela abaixo) e "Todos os arquivos".
+- **Link dentro de um `.md`** (ex.: `[veja](exemplo.pas)`): `OpenRelatedMdFile`
+  nao faz distincao de extensao — qualquer link local cai no mesmo
+  `RenderCurrentFile` que decide o highlight, entao um link pra `.pas` ja
+  abre com highlight sem precisar de nada a mais.
+- **Linha de comando** (duplo clique, "Nova janela"): mesma coisa, `FormCreate`
+  nao faz distincao, qualquer extensao reconhecida funciona.
+
+| Extensao | Linguagem (highlight.js) |
+|---|---|
+| `.pas`, `.dpr`, `.dfm` | Delphi/Pascal (`delphi`) |
+| `.py` | Python |
+| `.html`, `.htm` | HTML |
+| `.js` | JavaScript |
+| `.ts` | TypeScript |
+| `.css` | CSS |
+| `.php` | PHP |
+| `.sql` | SQL |
+| `.ini` | INI |
+| `.asp` | ASP classico (`vbscript-html`) |
+| `.vbs` | VBScript |
+| `.vb` | VB.NET |
+| `.txt` | Sem cor (`plaintext`) — so pra caber no mesmo dialogo/fluxo |
+
+Extensao fora dessa lista (inclusive `.md`) continua sendo tratada como
+Markdown, igual sempre foi.
 
 ## Estilos css editaveis
 

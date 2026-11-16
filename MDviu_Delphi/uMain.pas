@@ -129,6 +129,27 @@ begin
   APath := Copy(APath, 1, HashPos - 1);
 end;
 
+// Extensao (com ponto, ex. ".pas") -> nome de linguagem que o highlight.js
+// reconhece (ver lib\highlight.min.js e MDviu.md). Vazio = nao e arquivo de
+// codigo-fonte reconhecido, continua tratado como Markdown (comportamento
+// de sempre). Usado tanto no botao "Abrir..." quanto em link local clicado
+// dentro de um .md (ambos passam por RenderCurrentFile).
+function LanguageForExtension(const AExt: string): string;
+const
+  Exts: array[0..15] of string = ('.pas', '.dpr', '.dfm', '.py', '.html', '.htm',
+    '.js', '.ts', '.css', '.php', '.sql', '.ini', '.asp', '.vbs', '.vb', '.txt');
+  Langs: array[0..15] of string = ('delphi', 'delphi', 'delphi', 'python', 'html', 'html',
+    'javascript', 'typescript', 'css', 'php', 'sql', 'ini', 'vbscript-html', 'vbscript', 'vbnet',
+    'plaintext');
+var
+  I: Integer;
+begin
+  Result := '';
+  for I := Low(Exts) to High(Exts) do
+    if Exts[I] = AExt then
+      Exit(Langs[I]);
+end;
+
 // Cria e posiciona um botao flat da barra superior, avancando ALeft pro proximo.
 procedure SetupToolbarButton(ABtn: TColoredSpeedButton; AParent: TWinControl; var ALeft: Integer;
   const ACaption: string; AClick: TNotifyEvent);
@@ -251,7 +272,15 @@ begin
   ChkHtml.OnClick := ChkHtmlClick;
 
   OpenDialog1 := TOpenDialog.Create(Self);
-  OpenDialog1.Filter := 'Arquivos Markdown (*.md)|*.md|Todos os arquivos (*.*)|*.*';
+  // 2a opcao ("Linguagens") so filtra QUAIS arquivos aparecem no dialogo —
+  // quem decide se vira bloco de codigo com highlight e a extensao de
+  // verdade do arquivo escolhido (LanguageForExtension), nao esse filtro.
+  OpenDialog1.Filter :=
+    'Arquivos Markdown (*.md)|*.md|' +
+    'Linguagens (*.pas;*.dpr;*.dfm;*.py;*.html;*.htm;*.js;*.ts;*.css;*.php;*.sql;*.ini;*.asp;*.vbs;*.vb;*.txt)|' +
+      '*.pas;*.dpr;*.dfm;*.py;*.html;*.htm;*.js;*.ts;*.css;*.php;*.sql;*.ini;*.asp;*.vbs;*.vb;*.txt|' +
+    'Todos os arquivos (*.*)|*.*';
+  OpenDialog1.FilterIndex := 1; // default continua so .md
   OpenDialog1.Title := 'Abrir arquivo Markdown';
 
   EdgeBrowser1 := TEdgeBrowser.Create(Self);
@@ -378,21 +407,32 @@ end;
 
 procedure TFormMain.BuildShellAndNavigate;
 var
-  MarkdownItJs, ScriptJs, Shell: string;
+  MarkdownItJs, HljsJs, ScriptJs, Shell: string;
+  HljsLightCss, HljsDarkCss: string;
 begin
   // Protecao: um "</script" literal dentro do JS embutido fecharia a tag mais cedo.
   MarkdownItJs := StringReplace(ReadWebFile('lib\markdown-it.min.js'), '</script',
     '<\/script', [rfReplaceAll, rfIgnoreCase]);
+  HljsJs := StringReplace(ReadWebFile('lib\highlight.min.js'), '</script',
+    '<\/script', [rfReplaceAll, rfIgnoreCase]);
   ScriptJs := StringReplace(ReadWebFile('lib\script.js'), '</script', '<\/script',
     [rfReplaceAll, rfIgnoreCase]);
+  // Mesma protecao, so que pra "</style" (tema de highlight.js, ver script.js/setStyle).
+  HljsLightCss := StringReplace(ReadWebFile('lib\highlight-light.min.css'), '</style',
+    '<\/style', [rfReplaceAll, rfIgnoreCase]);
+  HljsDarkCss := StringReplace(ReadWebFile('lib\highlight-dark.min.css'), '</style',
+    '<\/style', [rfReplaceAll, rfIgnoreCase]);
 
   Shell :=
     '<!DOCTYPE html>' +
     '<html lang="pt-BR"><head><meta charset="UTF-8"><title>MDviu</title>' +
     '<style id="user-style"></style>' +
+    '<style id="hljs-light-theme">' + HljsLightCss + '</style>' +
+    '<style id="hljs-dark-theme">' + HljsDarkCss + '</style>' +
     '</head><body>' +
     '<div id="content"></div>' +
     '<script>' + MarkdownItJs + '</script>' +
+    '<script>' + HljsJs + '</script>' +
     '<script>' + ScriptJs + '</script>' +
     '</body></html>';
 
@@ -476,7 +516,7 @@ end;
 
 procedure TFormMain.RenderCurrentFile(AIsBack: Boolean);
 var
-  MdText, FileName, Css: string;
+  MdText, FileName, Css, Lang: string;
 begin
   try
     // Tem que capturar a posicao de rolagem ANTES de trocar o CSS — setStyle
@@ -500,12 +540,24 @@ begin
     end;
 
     MdText := TFile.ReadAllText(FCurrentMDPath);
-    MdText := InlineLocalImages(MdText);
     FileName := ExtractFileName(FCurrentMDPath);
+    // Extensao reconhecida (ver LanguageForExtension) e diferente de .md —
+    // trata o arquivo inteiro como codigo-fonte (highlight.js), nao Markdown.
+    // Cobre tanto o botao "Abrir..." quanto clicar num link local pra esse
+    // arquivo dentro de um .md ja aberto (os dois caem aqui).
+    Lang := LanguageForExtension(LowerCase(ExtractFileExt(FCurrentMDPath)));
 
-    EdgeBrowser1.ExecuteScript('renderMD(' + JsStringLiteral(MdText) + ', ' +
-      JsStringLiteral(FileName) + ', ' + IfThen(ChkHtml.Checked, 'true', 'false') + ', ' +
-      JsStringLiteral(FCurrentMDPath) + ', ' + IfThen(AIsBack, 'true', 'false') + ');');
+    if Lang <> '' then
+      EdgeBrowser1.ExecuteScript('renderSource(' + JsStringLiteral(MdText) + ', ' +
+        JsStringLiteral(FileName) + ', ' + JsStringLiteral(FCurrentMDPath) + ', ' +
+        IfThen(AIsBack, 'true', 'false') + ', ' + JsStringLiteral(Lang) + ');')
+    else
+    begin
+      MdText := InlineLocalImages(MdText);
+      EdgeBrowser1.ExecuteScript('renderMD(' + JsStringLiteral(MdText) + ', ' +
+        JsStringLiteral(FileName) + ', ' + IfThen(ChkHtml.Checked, 'true', 'false') + ', ' +
+        JsStringLiteral(FCurrentMDPath) + ', ' + IfThen(AIsBack, 'true', 'false') + ');');
+    end;
 
     // Link tipo "outro.md#secao": depois de renderizar o arquivo novo (que ja
     // rolou pro topo), rola ate o titulo com esse id — igual a ancora #secao

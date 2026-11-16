@@ -10,6 +10,12 @@
    estilo selecionado direto do disco).
    ========================================================================= */
 
+/* --mdviu-theme: "light" ou "dark" — o script.js le isso pra saber qual
+   tema de highlight.js (cor do bloco de codigo) combina com o estilo. */
+:root {
+    --mdviu-theme: light;
+}
+
 /* -------------------------------------------------------------------------
    1. BASE — fonte, cor de fundo, cor de texto da pagina inteira
    ------------------------------------------------------------------------- */

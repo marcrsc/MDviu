@@ -4,12 +4,33 @@
 
 const contentEl = document.getElementById("content");
 
+// Flag unica pra desligar o highlight de bloco de codigo se precisar (sem
+// interface pra isso por enquanto — so trocar aqui e recompilar).
+const ENABLE_SYNTAX_HIGHLIGHT = true;
+
 const md = window.markdownit({
     html: false,
     linkify: true,
     // quebra de linha simples (sem linha em branco) vira <br> — nao e o padrao
     // CommonMark (que ignora e junta num so fluxo), mas e como o usuario escreve.
     breaks: true,
+    // Bloco de codigo (```lang) colorido via highlight.js (lib/highlight.min.js,
+    // todas as linguagens). Retornar "" cai no escape padrao do markdown-it
+    // (linguagem nao reconhecida, ou highlight desligado pela flag acima).
+    highlight: function (code, lang) {
+        if (!ENABLE_SYNTAX_HIGHLIGHT || !lang || !window.hljs || !window.hljs.getLanguage(lang)) {
+            return "";
+        }
+        try {
+            // Classe "hljs" no <code> (nao no <pre>) — e o que os temas da
+            // propria lib esperam (ex.: "pre code.hljs{...}" no CSS do tema).
+            return '<pre><code class="hljs">' +
+                window.hljs.highlight(code, { language: lang, ignoreIllegals: true }).value +
+                "</code></pre>";
+        } catch (e) {
+            return "";
+        }
+    },
 });
 
 // Quebras de linha em branco seguidas: o Markdown padrao ignora — 1 linha em
@@ -220,17 +241,11 @@ function prepareScrollAnchor(fullPath) {
     pendingScrollAnchor = fullPath === currentPath ? captureScrollAnchor() : null;
 }
 
-// Chamado pelo Delphi (ExecuteScript) com o texto do .md, o nome do arquivo,
-// se a caixinha "HTML" esta marcada (libera HTML cru so pra esta renderizacao —
-// o <mark>/==texto== continua funcionando igual, nao depende disso), o caminho
-// completo do arquivo (chave da rolagem) e se esta navegacao e um "Voltar".
-function renderMD(text, filename, allowHtml, fullPath, isBack) {
+// Cauda comum a renderMD/renderSource: titulo da janela e rolagem (mesmo
+// arquivo re-renderizado -> volta pro bloco de antes; "Voltar" -> posicao
+// salva; arquivo novo -> topo). Ver comentario de scrollPositions acima.
+function finishRender(fullPath, filename, isBack, anchor) {
     const isSameFile = fullPath === currentPath;
-    const anchor = pendingScrollAnchor;
-    pendingScrollAnchor = null;
-
-    md.set({ html: !!allowHtml });
-    contentEl.innerHTML = md.render(expandBlankLines(text));
     document.title = "MDviu - " + (filename || "sem nome");
 
     if (isSameFile) {
@@ -243,9 +258,56 @@ function renderMD(text, filename, allowHtml, fullPath, isBack) {
     currentPath = fullPath || "";
 }
 
-// Chamado pelo Delphi (ExecuteScript) com o conteudo atual do style.css
+// Chamado pelo Delphi (ExecuteScript) com o texto do .md, o nome do arquivo,
+// se a caixinha "HTML" esta marcada (libera HTML cru so pra esta renderizacao —
+// o <mark>/==texto== continua funcionando igual, nao depende disso), o caminho
+// completo do arquivo (chave da rolagem) e se esta navegacao e um "Voltar".
+function renderMD(text, filename, allowHtml, fullPath, isBack) {
+    const anchor = pendingScrollAnchor;
+    pendingScrollAnchor = null;
+
+    md.set({ html: !!allowHtml });
+    contentEl.innerHTML = md.render(expandBlankLines(text));
+    finishRender(fullPath, filename, isBack, anchor);
+}
+
+function escapeHtml(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// Chamado pelo Delphi (ExecuteScript) quando o arquivo aberto NAO e .md, mas
+// tem extensao reconhecida (uMain.pas/LanguageForExtension) — ex.: abrir um
+// .pas direto, ou clicar num link local dentro de um .md que aponta pra um
+// .pas. Mostra o arquivo inteiro como UM bloco de codigo (sem passar pelo
+// markdown-it — nao faz sentido interpretar "==", "_", tabela etc. dentro de
+// codigo-fonte).
+function renderSource(text, filename, fullPath, isBack, lang) {
+    const anchor = pendingScrollAnchor;
+    pendingScrollAnchor = null;
+
+    if (ENABLE_SYNTAX_HIGHLIGHT && window.hljs && window.hljs.getLanguage(lang)) {
+        contentEl.innerHTML = '<pre><code class="hljs">' +
+            window.hljs.highlight(text, { language: lang, ignoreIllegals: true }).value +
+            "</code></pre>";
+    } else {
+        contentEl.innerHTML = "<pre><code>" + escapeHtml(text) + "</code></pre>";
+    }
+    finishRender(fullPath, filename, isBack, anchor);
+}
+
+// Chamado pelo Delphi (ExecuteScript) com o conteudo atual do style.css.
+// Junto, liga o tema de highlight.js (claro/escuro, lib/highlight-*.min.css,
+// embutidos no Shell como <style> separados) que combina com --mdviu-theme
+// declarado no proprio style.css — sem precisar editar o style.css em si.
 function setStyle(css) {
     document.getElementById("user-style").textContent = css;
+
+    const theme = getComputedStyle(document.documentElement)
+        .getPropertyValue("--mdviu-theme")
+        .trim();
+    const isDark = theme === "dark";
+    document.getElementById("hljs-light-theme").disabled = isDark;
+    document.getElementById("hljs-dark-theme").disabled = !isDark;
 }
 
 // Arrastar um arquivo nao e suportado (desativado de proposito: o F5 depois
