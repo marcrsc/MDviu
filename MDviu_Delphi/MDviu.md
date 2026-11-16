@@ -409,7 +409,8 @@ Histórico util pra nao redescobrir os mesmos problemas:
     API do Windows num passo pos-build — funcionou, mas exigiria rodar um
     script toda vez que recompilar, o que nao e como nenhum outro projeto
     Delphi funciona. **Revertido**: `mdviu.ico`/`OnyxBlue.vsf` voltam a ser
-    arquivos soltos (`TFile.LoadFromFile`, como sempre foi), `.dpr` sem
+    arquivos soltos (`TStyleManager.LoadFromFile`/`Icon.LoadFromFile`, como
+    sempre foi), `.dpr` sem
     `{$R}` nenhum, de novo sem manifesto. Se um dia quiser mesmo embutir o
     icone, o jeito correto e sem gambiarra e reconstruir a interface pelo
     Form Designer (`.dfm` normal, componentes em tempo de design) em vez de
