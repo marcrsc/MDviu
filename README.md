@@ -53,8 +53,10 @@ So pra **rodar** o MDviu (Delphi) ja compilado:
 
   | Arquivo | Para que serve |
   |---|---|
-  | `MDviu.exe` | O programa — icone e estilo visual (OnyxBlue) ja vem embutidos nele |
+  | `MDviu.exe` | O programa |
   | `WebView2Loader.dll` | Loader do WebView2 — sem ele o app nao abre |
+  | `OnyxBlue.vsf` | Estilo visual VCL da interface |
+  | `mdviu.ico` | Icone do programa |
   | `lib\` | Scripts (markdown-it, highlight.js, script.js) |
   | `styles\*.css` | Estilos disponiveis na combo "Estilo" |
 

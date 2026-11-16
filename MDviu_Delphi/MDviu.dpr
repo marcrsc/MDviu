@@ -1,11 +1,4 @@
-﻿program MDviu;
-
-// *.res: icone (Project Options > Application > Icon, Icon_MainIcon no
-// .dproj). *.dres: OnyxBlue.vsf como RCDATA (Project > Resources and
-// Images...). Containers diferentes, os dois precisam estar aqui — a IDE
-// as vezes regenera so um dos dois ao salvar, conferir se nao sumiu de novo.
-{$R *.res}
-{$R *.dres}
+program MDviu;
 
 uses
   Vcl.Forms,

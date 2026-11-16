@@ -168,20 +168,18 @@ begin
   Inc(ALeft, BTN_WIDTH + BTN_GAP);
 end;
 
-// Aplica o estilo visual VCL (OnyxBlue.vsf, embutido no .exe como recurso
-// tipo "VCLSTYLE" — Project > Resources and Images na IDE, ver
-// Vcl.Styles.pas/TStyleEngine.ResourceTypeName). NAO chama LoadFromResource:
-// o TStyleManager ja auto-descobre e registra sozinho qualquer recurso
-// VCLSTYLE do proprio exe (AutoDiscoverStyleResources, ligado por padrao)
-// assim que StyleNames e acessado — chamar LoadFromResource tambem registra
-// de novo e da EDuplicateStyleException ("ja registrado"). Se nao achar o
-// estilo (recurso ausente) ou algo falhar, segue com o visual padrao do
-// Windows — nunca trava o app por causa disso.
+// Carrega o estilo visual VCL (OnyxBlue.vsf, ao lado do .exe) e o aplica ao
+// programa inteiro. Se o arquivo nao existir ou algo falhar, segue com o
+// visual padrao do Windows — nunca trava o app por causa disso.
 procedure LoadAppStyle;
 var
-  StyleName: string;
+  VsfPath, StyleName: string;
 begin
+  VsfPath := ExtractFilePath(ParamStr(0)) + 'OnyxBlue.vsf';
+  if not TFile.Exists(VsfPath) then
+    Exit;
   try
+    TStyleManager.LoadFromFile(VsfPath);
     for StyleName in TStyleManager.StyleNames do
       if ContainsText(StyleName, 'Onyx') then
       begin
@@ -200,10 +198,9 @@ begin
   FHistory := TStringList.Create;
   FStyleFileNames := TStringList.Create;
 
-  // Icone embutido no .exe (Project Options > Application > Icon, recurso
-  // "MAINICON" — ver MDviu.dpr/{$R *.res}), nao depende mais de mdviu.ico solto.
-  if FindResource(HInstance, 'MAINICON', RT_GROUP_ICON) <> 0 then
-    Icon.LoadFromResourceName(HInstance, 'MAINICON');
+  var IconPath := ExtractFilePath(ParamStr(0)) + 'mdviu.ico';
+  if TFile.Exists(IconPath) then
+    Icon.LoadFromFile(IconPath);
 
   FWebFolder := IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0)));
   FStylesFolder := FWebFolder + 'styles\';

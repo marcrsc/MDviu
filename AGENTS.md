@@ -22,6 +22,16 @@ Guia curto pra quem (ou qual IA) continuar o projeto MDviu.
   indice logo apos o titulo e secoes (`##` em diante) sem acento nem
   pontuacao — so letras minusculas/maiusculas, digitos e espaco, pra ancora
   ficar igual em qualquer visualizador.
+- **Decisao estrutural/arquitetural (ex.: layout de formulario 100% em
+  codigo vs. Form Designer/`.dfm`, trocar mecanismo de algo que ja
+  funciona) pergunta ANTES de implementar**, mesmo sem o usuario pedir
+  explicitamente pra perguntar — nao e so "pergunta nao e comando", e
+  decisao de arquitetura mesmo. Por padrao, prefira `.dfm` normal com
+  componentes em tempo de design (Form Designer) em vez de montar tudo em
+  codigo no `FormCreate`: fica mais facil de manter a mao, e o VCL escala
+  sozinho pra DPI diferente (controle criado em codigo com pixel fixo nao
+  ganha essa escala automatica — foi exatamente isso que causou o
+  bug #12 em [MDviu_Delphi/MDviu.md](MDviu_Delphi/MDviu.md#bugs-importantes-ja-corrigidos)).
 
 ## Contexto do projeto
 
@@ -40,7 +50,7 @@ limitacoes conhecidas e bugs ja corrigidos (nao redescobrir os mesmos).
 | Codigo do app Delphi | `MDviu_Delphi/uMain.pas`, `MDviu_Delphi/MDviu.dpr` |
 | CSS editaveis (combo "Estilo") | `MDviu_Delphi/styles/*.css` |
 | Logica JS (markdown-it, links, titulos) | `MDviu_Delphi/lib/script.js` |
-| Dependencias que tem que ir junto do `.exe` | `WebView2Loader.dll`, pastas `lib/` e `styles/` (icone e estilo VCL ja vem embutidos no `.exe`, ver [MDviu_Delphi/MDviu.md#arquivos-que-acompanham-o-exe](MDviu_Delphi/MDviu.md#arquivos-que-acompanham-o-exe)) |
+| Dependencias que tem que ir junto do `.exe` | `WebView2Loader.dll`, `OnyxBlue.vsf`, `mdviu.ico`, pastas `lib/` e `styles/` |
 | Protótipo HTML | `MDviu_HTML/` |
 | `testes/` (raiz do repo) | So material de teste manual (md, imagens, subpasta) — nao e parte do produto |
 

@@ -44,47 +44,13 @@ Todos estes arquivos moram ao lado de `MDviu.exe` e sao obrigatorios:
 | Arquivo | Para que serve |
 |---|---|
 | `WebView2Loader.dll` | Loader do WebView2 — sem ele o app nao abre (ver [Bugs importantes ja corrigidos](#bugs-importantes-ja-corrigidos)) |
+| `OnyxBlue.vsf` | Estilo visual VCL (tema azul escuro da interface) |
+| `mdviu.ico` | Icone do programa |
 | `lib\script.js` | Logica de renderizacao (markdown-it, links, titulos) |
 | `lib\markdown-it.min.js` | Biblioteca de conversao Markdown -> HTML |
 | `lib\highlight.min.js` | Destaque de sintaxe em bloco de codigo (ver [Destaque de sintaxe em blocos de codigo](#destaque-de-sintaxe-em-blocos-de-codigo)) |
 | `lib\highlight-light.min.css` / `lib\highlight-dark.min.css` | Tema de cor do highlight.js, claro e escuro — NAO aparecem na combo "Estilo" por estarem em `lib\`, nao em `styles\` |
 | `styles\*.css` | Um arquivo por estilo disponivel na combo "Estilo" |
-
-**Icone e estilo visual VCL (OnyxBlue) ja vem embutidos no `MDviu.exe`** —
-nao sao arquivo solto:
-
-- **Icone**: `mdviu.ico` fica no fonte (`MDviu_Delphi\mdviu.ico`), mas e
-  usado so pra gerar o recurso — Project Options > Application > Icon na
-  IDE. Compilado como recurso `MAINICON` em `MDviu.res`
-  (`{$R *.res}` no `.dpr`), lido via `Icon.LoadFromResourceName` em
-  `FormCreate` (`uMain.pas`).
-- **Estilo (OnyxBlue.vsf)**: idem, fica no fonte
-  (`MDviu_Delphi\OnyxBlue.vsf`) so pra regenerar o recurso se precisar —
-  Project > Resources and Images na IDE, **tipo tem que ser `VCLSTYLE`**
-  (nao `RCDATA` generico — e o tipo que `TStyleManager` exige pra `.vsf`,
-  ver `Vcl.Styles.pas`/`TStyleEngine.ResourceTypeName`; usar `RCDATA` compila
-  mas da erro em tempo de execucao, "Resource ... not found"). A propria IDE
-  gera `MDviuResource.rc` (texto simples, tambem versionado — e o
-  "fonte" editavel, igual um `.rc` classico pra um `.res`) com a linha
-  `Resource_1 VCLSTYLE "OnyxBlue.vsf"` — o nome do recurso ficou
-  `Resource_1`, nao o que foi digitado no campo Identifier da caixa de
-  dialogo (`VSFDATA`), por algum motivo a IDE nao usou; o codigo em
-  `uMain.pas` usa o nome real (`RESOURCE_1`, Delphi nao diferencia
-  maiusculas no nome do recurso). Compilado em
-  `MDviu.dres` (`{$R *.dres}` no `.dpr`). O `TStyleManager` **auto-descobre
-  e registra sozinho** qualquer recurso `VCLSTYLE` do proprio exe
-  (`AutoDiscoverStyleResources`, ligado por padrao) assim que `StyleNames`
-  e acessado — por isso `LoadAppStyle` (`uMain.pas`) so le `StyleNames` e
-  chama `TrySetStyle`, NAO chama `LoadFromResource`/`LoadFromStream`
-  manualmente (isso registraria de novo e daria `EDuplicateStyleException`,
-  "ja registrado").
-- **Ambos os `{$R}` sao necessarios ao mesmo tempo no `.dpr`** — `*.res`
-  (icone) e `*.dres` (vsf) sao containers diferentes; a IDE as vezes
-  regenera/salva so um dos dois, conferir se o outro nao sumiu.
-- `MDviu.res`/`MDviu.dres` sao versionados (excecao no `.gitignore`, que
-  ignora `*.res`/`*.dres` em geral por serem normalmente artefato de
-  build) — sem eles, clonar o repo e compilar direto nao reproduz o icone
-  nem o estilo.
 
 ## Bibliotecas de terceiros
 
@@ -425,22 +391,30 @@ Histórico util pra nao redescobrir os mesmos problemas:
     encontrado". Corrigido separando a ancora do caminho antes de tudo
     (`ExtractAnchor`), guardando-a (`FPendingAnchor`) pra rolar ate o
     titulo certo depois que o arquivo novo renderizar.
-11. **Icone/estilo embutidos (`MAINICON`/`VCLSTYLE`) nao apareciam** — tres
-    causas em sequencia, ao tentar embutir `mdviu.ico`/`OnyxBlue.vsf` no
-    `.exe` (ver [Arquivos que acompanham o exe](#arquivos-que-acompanham-o-exe)):
-    primeiro faltava `{$R *.res}`/`{$R *.dres}` no `.dpr` (a IDE grava o
-    recurso em `MDviu.res`/`MDviu.dres`, mas sem essas diretivas o `dcc64`
-    nunca linka no `.exe` — e a IDE as vezes regenera o `.dpr` com só um
-    dos dois `{$R}`, derrubando o outro); depois o `.vsf` foi cadastrado em
-    "Resources and Images" com tipo `RCDATA` (compila sem erro, mas o
-    `TStyleManager` exige o tipo `VCLSTYLE` especificamente pra `.vsf` —
-    com `RCDATA` da "Resource ... not found" em tempo de execucao); por
-    fim, com o tipo certo, chamar `TStyleManager.LoadFromResource`
-    manualmente dava `EDuplicateStyleException` ("ja registrado"), porque
-    o `TStyleManager` ja auto-descobre e registra sozinho qualquer recurso
-    `VCLSTYLE` do proprio exe assim que `StyleNames` e acessado —
-    `LoadAppStyle` (`uMain.pas`) so precisa ler `StyleNames`/chamar
-    `TrySetStyle`, nunca `LoadFromResource`.
+11. **Tentativa de embutir `mdviu.ico`/`OnyxBlue.vsf` no `.exe` (revertida)**
+    — pra nao depender dos dois arquivos soltos, foram compilados como
+    recursos (`{$R *.res}`/`{$R *.dres}` no `.dpr`, novo pra esse projeto —
+    nunca tinha nenhum `{$R}`). Isso trouxe, sem querer, o **manifesto
+    padrao do Windows** que a IDE gera junto (antes o `.exe` nao tinha
+    manifesto nenhum). Manifesto muda dois comportamentos do Windows ao
+    mesmo tempo: ativa controles com tema (ComCtl32 v6 — por isso o hover
+    dos botoes da toolbar passou de contorno fino pra preenchimento colorido)
+    e ativa DPI-aware de verdade (`PerMonitorV2`, ja configurado no projeto
+    mas nunca de fato linkado) — como a interface inteira e montada em
+    codigo no `FormCreate` com posicao/tamanho em pixel fixo (sem `.dfm`,
+    decisao de projeto pra evitar risco de corrupcao do arquivo), isso
+    expos um bug de layout em tela com escala >100% que nunca tinha
+    aparecido (testado numa maquina com 150%). Tentei remover so o
+    manifesto (mantendo icone/estilo embutidos) via `UpdateResource` da
+    API do Windows num passo pos-build — funcionou, mas exigiria rodar um
+    script toda vez que recompilar, o que nao e como nenhum outro projeto
+    Delphi funciona. **Revertido**: `mdviu.ico`/`OnyxBlue.vsf` voltam a ser
+    arquivos soltos (`TFile.LoadFromFile`, como sempre foi), `.dpr` sem
+    `{$R}` nenhum, de novo sem manifesto. Se um dia quiser mesmo embutir o
+    icone, o jeito correto e sem gambiarra e reconstruir a interface pelo
+    Form Designer (`.dfm` normal, componentes em tempo de design) em vez de
+    montar tudo em codigo — ai o VCL escala sozinho pra qualquer DPI, do
+    jeito que os outros programas Delphi do autor sempre funcionaram.
 
 ## Como compilar
 
