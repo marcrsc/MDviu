@@ -16,6 +16,9 @@ Win32/
 Win64/
 mdviu_debug.log
 
-# Arquivos de teste manual (nao sao parte do produto, ver AGENTS.md)
-/testes/
+# PDFs gerados pelo "Salvar PDF" durante testes
 /MDviu_Delphi/*.pdf
+/testes/*.pdf
+
+# Backup local do repositorio inteiro (fica so no Dropbox, nunca no GitHub)
+/BAK/
