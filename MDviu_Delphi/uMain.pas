@@ -7,7 +7,7 @@ uses
   System.Classes, Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
   Vcl.Edge, Winapi.WebView2, System.IOUtils, System.JSON, Vcl.ActnList,
   Vcl.Menus, System.Actions, Vcl.StdCtrls, Vcl.ExtCtrls, System.Generics.Collections,
-  Vcl.Themes, Vcl.Styles, System.StrUtils, Winapi.ShellAPI, Vcl.Buttons,
+  System.StrUtils, Winapi.ShellAPI, Vcl.Buttons,
   System.NetEncoding, System.RegularExpressions, Vcl.Clipbrd;
 
 const
@@ -16,43 +16,48 @@ const
   // o sufixo por vez — para trocar o default, renomeie o arquivo.
   DEFAULT_STYLE_SUFFIX = '_DEF';
 
-  // Visual dos botoes da barra superior (flat, fundo azul escuro)
-  BTN_WIDTH = 72;
-  BTN_GAP = 6;
-  BTN_COLOR: TColor = $502814; // azul escuro (BGR), mesmo tom do icone/tema
-
 type
-  // TSpeedButton herda Color como protected — republica como public pra poder
-  // pintar o fundo do botao.
-  TColoredSpeedButton = class(TSpeedButton)
-  public
-    property Color;
-  end;
-
   TFormMain = class(TForm)
-    procedure FormCreate(Sender: TObject);
-  private
-    EdgeBrowser1: TEdgeBrowser;
-    ActionList1: TActionList;
-    ActReload: TAction;
-    ActPrint: TAction;
-    ActExportPdf: TAction;
-    ActOpen: TAction;
-    ActScrollTop: TAction;
-    ActBack: TAction;
     PanelTop: TPanel;
     LblStyle: TLabel;
     ComboStyles: TComboBox;
-    BtnOpen: TColoredSpeedButton;
-    BtnBack: TColoredSpeedButton;
-    BtnReload: TColoredSpeedButton;
-    BtnScrollTop: TColoredSpeedButton;
-    BtnPrint: TColoredSpeedButton;
-    BtnExportPdf: TColoredSpeedButton;
+    BtnOpen: TSpeedButton;
+    BtnBack: TSpeedButton;
+    BtnScrollTop: TSpeedButton;
+    BtnReload: TSpeedButton;
+    BtnPrint: TSpeedButton;
+    BtnExportPdf: TSpeedButton;
     ChkNewWindow: TCheckBox;
     ChkHtml: TCheckBox;
+    EdgeBrowser1: TEdgeBrowser;
+    ActionList1: TActionList;
+    ActOpen: TAction;
+    ActBack: TAction;
+    ActScrollTop: TAction;
+    ActReload: TAction;
+    ActPrint: TAction;
+    ActExportPdf: TAction;
     OpenDialog1: TOpenDialog;
-
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    procedure ComboStylesChange(Sender: TObject);
+    procedure ChkHtmlClick(Sender: TObject);
+    procedure EdgeBrowser1CreateWebViewCompleted(Sender: TCustomEdgeBrowser; AResult: HResult);
+    procedure EdgeBrowser1NavigationCompleted(Sender: TCustomEdgeBrowser; IsSuccess: Boolean;
+      WebErrorStatus: COREWEBVIEW2_WEB_ERROR_STATUS);
+    procedure EdgeBrowser1PrintToPDFCompleted(Sender: TCustomEdgeBrowser; ErrorCode: HResult;
+      IsSuccessful: Boolean);
+    procedure EdgeBrowser1NewWindowRequested(Sender: TCustomEdgeBrowser;
+      Args: TNewWindowRequestedEventArgs);
+    procedure EdgeBrowser1WebMessageReceived(Sender: TCustomEdgeBrowser;
+      Args: TWebMessageReceivedEventArgs);
+    procedure ActOpenExecute(Sender: TObject);
+    procedure ActBackExecute(Sender: TObject);
+    procedure ActScrollTopExecute(Sender: TObject);
+    procedure ActReloadExecute(Sender: TObject);
+    procedure ActPrintExecute(Sender: TObject);
+    procedure ActExportPdfExecute(Sender: TObject);
+  private
     FCurrentMDPath: string;    // caminho do .md atualmente aberto
     FPendingAnchor: string;    // id de titulo pra rolar ate depois do proximo render (link "arquivo.md#secao")
     FHistory: TStringList;     // pilha de arquivos visitados, pro botao "Voltar"
@@ -69,27 +74,8 @@ type
     function ImageToDataUri(const AImgPath: string): string;
     function ImageMatchEvaluator(const AMatch: TMatch): string;
     function ReadWebFile(const AFileName: string): string;
-    procedure ComboStylesChange(Sender: TObject);
-    procedure ChkHtmlClick(Sender: TObject);
     procedure LaunchNewMDviuWindow(const AFilePath: string);
     procedure OpenRelatedMdFile(const AHref: string);
-
-    procedure EdgeBrowser1CreateWebViewCompleted(Sender: TCustomEdgeBrowser; AResult: HResult);
-    procedure EdgeBrowser1NavigationCompleted(Sender: TCustomEdgeBrowser; IsSuccess: Boolean;
-      WebErrorStatus: COREWEBVIEW2_WEB_ERROR_STATUS);
-    procedure EdgeBrowser1PrintToPDFCompleted(Sender: TCustomEdgeBrowser; ErrorCode: HResult;
-      IsSuccessful: Boolean);
-    procedure EdgeBrowser1NewWindowRequested(Sender: TCustomEdgeBrowser;
-      Args: TNewWindowRequestedEventArgs);
-    procedure EdgeBrowser1WebMessageReceived(Sender: TCustomEdgeBrowser;
-      Args: TWebMessageReceivedEventArgs);
-
-    procedure ActReloadExecute(Sender: TObject);
-    procedure ActPrintExecute(Sender: TObject);
-    procedure ActExportPdfExecute(Sender: TObject);
-    procedure ActOpenExecute(Sender: TObject);
-    procedure ActScrollTopExecute(Sender: TObject);
-    procedure ActBackExecute(Sender: TObject);
   public
   end;
 
@@ -150,57 +136,12 @@ begin
       Exit(Langs[I]);
 end;
 
-// Cria e posiciona um botao flat da barra superior, avancando ALeft pro proximo.
-procedure SetupToolbarButton(ABtn: TColoredSpeedButton; AParent: TWinControl; var ALeft: Integer;
-  const ACaption: string; AClick: TNotifyEvent);
-begin
-  ABtn.Parent := AParent;
-  ABtn.Caption := ACaption;
-  ABtn.Left := ALeft;
-  ABtn.Top := 4;
-  ABtn.Width := BTN_WIDTH;
-  ABtn.Height := 24;
-  ABtn.Flat := True;
-  ABtn.Color := BTN_COLOR;
-  ABtn.Font.Color := clWhite;
-  ABtn.StyleElements := [];
-  ABtn.OnClick := AClick;
-  Inc(ALeft, BTN_WIDTH + BTN_GAP);
-end;
-
-// Carrega o estilo visual VCL (OnyxBlue.vsf, ao lado do .exe) e o aplica ao
-// programa inteiro. Se o arquivo nao existir ou algo falhar, segue com o
-// visual padrao do Windows — nunca trava o app por causa disso.
-procedure LoadAppStyle;
-var
-  VsfPath, StyleName: string;
-begin
-  VsfPath := ExtractFilePath(ParamStr(0)) + 'OnyxBlue.vsf';
-  if not TFile.Exists(VsfPath) then
-    Exit;
-  try
-    TStyleManager.LoadFromFile(VsfPath);
-    for StyleName in TStyleManager.StyleNames do
-      if ContainsText(StyleName, 'Onyx') then
-      begin
-        TStyleManager.TrySetStyle(StyleName);
-        Break;
-      end;
-  except
-    // visual e cosmetico — uma falha aqui nao pode impedir o programa de abrir
-  end;
-end;
-
+// Os componentes visuais estao todos no uMain.dfm. Estilo VCL e icone vem do
+// projeto (MDviu.dproj, aplicados no MDviu.dpr/recurso), nao de arquivo solto.
 procedure TFormMain.FormCreate(Sender: TObject);
 begin
-  LoadAppStyle;
-  Caption := 'MDviu';
   FHistory := TStringList.Create;
   FStyleFileNames := TStringList.Create;
-
-  var IconPath := ExtractFilePath(ParamStr(0)) + 'mdviu.ico';
-  if TFile.Exists(IconPath) then
-    Icon.LoadFromFile(IconPath);
 
   FWebFolder := IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0)));
   FStylesFolder := FWebFolder + 'styles\';
@@ -211,124 +152,17 @@ begin
     FCurrentMDPath := '';
   FPendingAnchor := ExtractAnchor(FCurrentMDPath);
 
-  // Barra superior com o seletor de estilo
-  PanelTop := TPanel.Create(Self);
-  PanelTop.Parent := Self;
-  PanelTop.Align := alTop;
-  PanelTop.Height := 32;
-  PanelTop.BevelOuter := bvNone;
-  PanelTop.Color := clBtnFace;
-
-  LblStyle := TLabel.Create(Self);
-  LblStyle.Parent := PanelTop;
-  LblStyle.Caption := 'Estilo:';
-  LblStyle.Left := 8;
-  LblStyle.Top := 9;
-
-  ComboStyles := TComboBox.Create(Self);
-  ComboStyles.Parent := PanelTop;
-  ComboStyles.Style := csDropDownList;
-  ComboStyles.Left := 50;
-  ComboStyles.Top := 5;
-  ComboStyles.Width := 160;
-
-  // 6 botoes, mesma largura, visual flat com fundo azul (TSpeedButton, por fora
-  // do tema VCL — StyleElements:=[] evita que o tema repinte por cima da cor).
-  var BtnLeft := 224;
-
-  BtnOpen := TColoredSpeedButton.Create(Self);
-  SetupToolbarButton(BtnOpen, PanelTop, BtnLeft, 'Abrir...', ActOpenExecute);
-
-  BtnBack := TColoredSpeedButton.Create(Self);
-  SetupToolbarButton(BtnBack, PanelTop, BtnLeft, 'Voltar', ActBackExecute);
-
-  BtnScrollTop := TColoredSpeedButton.Create(Self);
-  SetupToolbarButton(BtnScrollTop, PanelTop, BtnLeft, 'Topo', ActScrollTopExecute);
-
-  BtnReload := TColoredSpeedButton.Create(Self);
-  SetupToolbarButton(BtnReload, PanelTop, BtnLeft, 'Atualizar', ActReloadExecute);
-
-  BtnPrint := TColoredSpeedButton.Create(Self);
-  SetupToolbarButton(BtnPrint, PanelTop, BtnLeft, 'Imprimir', ActPrintExecute);
-
-  BtnExportPdf := TColoredSpeedButton.Create(Self);
-  SetupToolbarButton(BtnExportPdf, PanelTop, BtnLeft, 'Salvar PDF', ActExportPdfExecute);
-
-  ChkNewWindow := TCheckBox.Create(Self);
-  ChkNewWindow.Parent := PanelTop;
-  ChkNewWindow.Caption := 'Nova janela';
-  ChkNewWindow.Left := BtnLeft + 12;
-  ChkNewWindow.Top := 8;
-  ChkNewWindow.Width := 95;
-  ChkNewWindow.Checked := False; // link p/ outro .md navega na mesma janela por padrao (use "Voltar")
-
-  ChkHtml := TCheckBox.Create(Self);
-  ChkHtml.Parent := PanelTop;
-  ChkHtml.Caption := 'HTML';
-  ChkHtml.Left := ChkNewWindow.Left + ChkNewWindow.Width + 6;
-  ChkHtml.Top := 8;
-  ChkHtml.Width := 60;
-  ChkHtml.Checked := False; // HTML cru no .md desligado por padrao (seguranca); reseta a cada arquivo novo
-  ChkHtml.OnClick := ChkHtmlClick;
-
-  OpenDialog1 := TOpenDialog.Create(Self);
-  // 2a opcao ("Linguagens") so filtra QUAIS arquivos aparecem no dialogo —
-  // quem decide se vira bloco de codigo com highlight e a extensao de
-  // verdade do arquivo escolhido (LanguageForExtension), nao esse filtro.
-  OpenDialog1.Filter :=
-    'Arquivos Markdown (*.md)|*.md|' +
-    'Linguagens (*.pas;*.dpr;*.dfm;*.py;*.html;*.htm;*.js;*.ts;*.css;*.php;*.sql;*.ini;*.asp;*.vbs;*.vb;*.txt)|' +
-      '*.pas;*.dpr;*.dfm;*.py;*.html;*.htm;*.js;*.ts;*.css;*.php;*.sql;*.ini;*.asp;*.vbs;*.vb;*.txt|' +
-    'Todos os arquivos (*.*)|*.*';
-  OpenDialog1.FilterIndex := 1; // default continua so .md
-  OpenDialog1.Title := 'Abrir arquivo Markdown';
-
-  EdgeBrowser1 := TEdgeBrowser.Create(Self);
-  EdgeBrowser1.Parent := Self;
-  EdgeBrowser1.Align := alClient;
-  EdgeBrowser1.OnCreateWebViewCompleted := EdgeBrowser1CreateWebViewCompleted;
-  EdgeBrowser1.OnNavigationCompleted := EdgeBrowser1NavigationCompleted;
-  EdgeBrowser1.OnPrintToPDFCompleted := EdgeBrowser1PrintToPDFCompleted;
-  EdgeBrowser1.OnNewWindowRequested := EdgeBrowser1NewWindowRequested;
-  EdgeBrowser1.OnWebMessageReceived := EdgeBrowser1WebMessageReceived;
-
+  // Atalhos (F5, Ctrl+P, Ctrl+Shift+P, Ctrl+O, Alt+Backspace) ficam nas
+  // TAction do ActionList1, no .dfm: reconhecidos pelo formulario
+  // (Form.IsShortCut), o Vcl.Edge avisa o WebView2 que a tecla foi tratada.
   PopulateStyles;
-  ComboStyles.OnChange := ComboStylesChange; // so depois de definir o ItemIndex inicial
-
-  // Atalhos de teclado: reconhecidos pelo formulario (Form.IsShortCut), o que faz o
-  // Vcl.Edge avisar o WebView2 que a tecla foi tratada por nos (em vez do navegador).
-  ActionList1 := TActionList.Create(Self);
-
-  ActReload := TAction.Create(Self);
-  ActReload.ActionList := ActionList1;
-  ActReload.ShortCut := VK_F5;
-  ActReload.OnExecute := ActReloadExecute;
-
-  ActPrint := TAction.Create(Self);
-  ActPrint.ActionList := ActionList1;
-  ActPrint.ShortCut := Vcl.Menus.ShortCut(Ord('P'), [ssCtrl]);
-  ActPrint.OnExecute := ActPrintExecute;
-
-  ActExportPdf := TAction.Create(Self);
-  ActExportPdf.ActionList := ActionList1;
-  ActExportPdf.ShortCut := Vcl.Menus.ShortCut(Ord('P'), [ssCtrl, ssShift]);
-  ActExportPdf.OnExecute := ActExportPdfExecute;
-
-  ActOpen := TAction.Create(Self);
-  ActOpen.ActionList := ActionList1;
-  ActOpen.ShortCut := Vcl.Menus.ShortCut(Ord('O'), [ssCtrl]);
-  ActOpen.OnExecute := ActOpenExecute;
-
-  ActScrollTop := TAction.Create(Self);
-  ActScrollTop.ActionList := ActionList1;
-  ActScrollTop.OnExecute := ActScrollTopExecute;
-
-  ActBack := TAction.Create(Self);
-  ActBack.ActionList := ActionList1;
-  ActBack.ShortCut := Vcl.Menus.ShortCut(VK_BACK, [ssAlt]); // Alt+Backspace, como em navegadores
-  ActBack.OnExecute := ActBackExecute;
-
   EdgeBrowser1.CreateWebView;
+end;
+
+procedure TFormMain.FormDestroy(Sender: TObject);
+begin
+  FStyleFileNames.Free;
+  FHistory.Free;
 end;
 
 // Le web\styles\*.css e preenche a combo. Cada arquivo novo colocado nessa

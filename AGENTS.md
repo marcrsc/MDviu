@@ -47,17 +47,18 @@ limitacoes conhecidas e bugs ja corrigidos (nao redescobrir os mesmos).
 
 | Coisa | Onde |
 |---|---|
-| Codigo do app Delphi | `MDviu_Delphi/uMain.pas`, `MDviu_Delphi/MDviu.dpr` |
+| Codigo do app Delphi | `MDviu_Delphi/uMain.pas` + `uMain.dfm` (tela, Form Designer), `MDviu.dpr`, `MDviu.dproj` (icone, estilo VCL, manifesto) |
 | CSS editaveis (combo "Estilo") | `MDviu_Delphi/styles/*.css` |
 | Logica JS (markdown-it, links, titulos) | `MDviu_Delphi/lib/script.js` |
-| Dependencias que tem que ir junto do `.exe` | `WebView2Loader.dll`, `OnyxBlue.vsf`, `mdviu.ico`, pastas `lib/` e `styles/` |
+| Dependencias que tem que ir junto do `.exe` | `WebView2Loader.dll`, pastas `lib/` e `styles/` (icone e estilo VCL ja vem dentro do `.exe`) |
 | Protótipo HTML | `MDviu_HTML/` |
-| `testes/` (raiz do repo) | So material de teste manual (md, imagens, subpasta) — nao e parte do produto |
+| `testes/` (raiz do repo) | Material de teste manual (md, imagens, subpasta), versionado — repo e publico, nada de documento interno aqui |
+| `BAK/` (raiz do repo) | Copia de seguranca local do repositorio inteiro, so no Dropbox (`.gitignore`) — nao mexer |
 
 ## Antes de commitar ou dar push
 
-- Repositorio privado, conta GitHub `marcrsc`.
-- Compilar em **64 bits** (`dcc64`) — ver [MDviu_Delphi/MDviu.md](MDviu_Delphi/MDviu.md#como-compilar).
+- Repositorio **publico**, conta GitHub `marcrsc` — nada de dado interno da empresa.
+- Compilar em **64 bits** pela IDE ou `MDviu_Delphi/build.bat` (MSBuild), nunca `dcc64` direto — ver [MDviu_Delphi/MDviu.md](MDviu_Delphi/MDviu.md#como-compilar).
 - `.gitignore` ja cobre artefatos de build (`*.exe`, `*.dcu`, etc.) — nunca
   versionar o `.exe` compilado nem o log de debug.
 - Mensagens de commit e PRs levam a atribuicao combinada com o usuario (ver

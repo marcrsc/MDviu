@@ -44,13 +44,14 @@ Todos estes arquivos moram ao lado de `MDviu.exe` e sao obrigatorios:
 | Arquivo | Para que serve |
 |---|---|
 | `WebView2Loader.dll` | Loader do WebView2 — sem ele o app nao abre (ver [Bugs importantes ja corrigidos](#bugs-importantes-ja-corrigidos)) |
-| `OnyxBlue.vsf` | Estilo visual VCL (tema azul escuro da interface) |
-| `mdviu.ico` | Icone do programa |
 | `lib\script.js` | Logica de renderizacao (markdown-it, links, titulos) |
 | `lib\markdown-it.min.js` | Biblioteca de conversao Markdown -> HTML |
 | `lib\highlight.min.js` | Destaque de sintaxe em bloco de codigo (ver [Destaque de sintaxe em blocos de codigo](#destaque-de-sintaxe-em-blocos-de-codigo)) |
 | `lib\highlight-light.min.css` / `lib\highlight-dark.min.css` | Tema de cor do highlight.js, claro e escuro — NAO aparecem na combo "Estilo" por estarem em `lib\`, nao em `styles\` |
 | `styles\*.css` | Um arquivo por estilo disponivel na combo "Estilo" |
+
+Icone e estilo visual VCL (Onyx Blue) vem **dentro do `MDviu.exe`**, nao sao
+arquivo solto — ver [Arquitetura](#arquitetura).
 
 ## Bibliotecas de terceiros
 
@@ -66,13 +67,30 @@ descrito em [Arquitetura](#arquitetura).
 
 ## Arquitetura
 
-`uMain.pas` monta toda a interface em codigo (o `.dfm` so tem o `TForm` vazio,
-sem componentes — evita risco de um `.dfm` mal formado).
+Projeto Delphi VCL padrao, como feito pela IDE:
+
+- **Interface no Form Designer** (`uMain.dfm`): painel, label, combo, os 6
+  `TSpeedButton`, os 2 checkboxes, `TEdgeBrowser`, `TOpenDialog` e
+  `TActionList` (com os atalhos de teclado) sao todos componentes de tempo
+  de projeto, com os eventos ligados no proprio `.dfm`. Nada visual e
+  criado em codigo — da pra abrir e editar a tela normalmente na IDE.
+- **Icone e estilo VCL configurados no projeto** (`MDviu.dproj`):
+  `Icon_MainIcon` = `mdviu.ico` (Project Options > Application > Icon) e
+  `Custom_Styles` = Onyx Blue (Project Options > Application > Appearance,
+  arquivo vindo da instalacao do RAD Studio, `$(BDSCOMMONDIR)\Styles`).
+  Ao compilar, o MSBuild gera o `MDviu.res` com icone, estilo, manifesto
+  (temas + DPI-aware `PerMonitorV2`) e versao, linkado pelo `{$R *.res}`
+  do `MDviu.dpr`, que aplica o estilo com `TStyleManager.TrySetStyle`
+  antes de criar o form. Pra testar outro estilo: marcar na Appearance e
+  trocar o nome no `.dpr` — sem mexer no resto do codigo.
+- `MDviu.res` e artefato (gerado a cada compilacao a partir do `.dproj`,
+  fica no `.gitignore`); o `.dproj` e quem guarda essas configuracoes e e
+  versionado.
 
 Fluxo de carregamento:
 
-1. `FormCreate` cria a barra de ferramentas, o `TEdgeBrowser` e chama
-   `CreateWebView`.
+1. O `.dfm` cria a tela; `FormCreate` le os parametros, preenche a combo de
+   estilos CSS (`PopulateStyles`) e chama `CreateWebView`.
 2. `OnCreateWebViewCompleted` dispara `BuildShellAndNavigate`: monta uma
    pagina HTML (com o `markdown-it.min.js` e o `script.js` embutidos
    inline) e chama `NavigateToString` — so acontece uma vez, por processo.
@@ -416,9 +434,25 @@ Histórico util pra nao redescobrir os mesmos problemas:
     Form Designer (`.dfm` normal, componentes em tempo de design) em vez de
     montar tudo em codigo — ai o VCL escala sozinho pra qualquer DPI, do
     jeito que os outros programas Delphi do autor sempre funcionaram.
+12. **Interface refeita pelo Form Designer (resolve o item 11)** — a tela
+    passou a ser 100% `.dfm`, e icone + estilo vem da configuracao do
+    projeto (ver [Arquitetura](#arquitetura)). Com isso o manifesto
+    (temas + `PerMonitorV2`) entra de proposito e o VCL escala a tela
+    sozinho em qualquer DPI. Diferenca visual esperada: os botoes da barra
+    agora sao pintados pelo tema Onyx Blue (texto cinza claro, hover azul
+    preenchido) em vez do azul fixo pintado na mao de antes.
 
 ## Como compilar
 
-Target **Win64** (`dcc64`, nao `dcc32` — a `WebView2Loader.dll` bundlada e
-x64). Arquivos que tem que acompanhar o `MDviu.exe` apos compilar: ver
+Target **Win64** (a `WebView2Loader.dll` bundlada e x64). Duas formas,
+mesmo resultado (`MDviu.exe` gerado em `MDviu_Delphi\`, ao lado de
+`lib\`/`styles\`):
+
+- **IDE**: abrir `MDviu.dproj`, plataforma Windows 64-bit, Build.
+- **Linha de comando**: `MDviu_Delphi\build.bat` (ou `build.bat Debug`) —
+  chama o `rsvars.bat` do RAD Studio e o `msbuild` no `MDviu.dproj`.
+
+Nao usar `dcc64 MDviu.dpr` direto: o `dcc64` sozinho nao gera o
+`MDviu.res`, entao o `.exe` sai sem icone e sem estilo (ou nem compila, se
+o `.res` nao existir). Arquivos que tem que acompanhar o `MDviu.exe`: ver
 [Arquivos que acompanham o exe](#arquivos-que-acompanham-o-exe).
