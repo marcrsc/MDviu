@@ -24,8 +24,8 @@ object FormMain: TFormMain
     TabOrder = 0
     object LblStyle: TLabel
       Left = 8
-      Top = 9
-      Width = 36
+      Top = 7
+      Width = 31
       Height = 15
       Caption = 'Estilo:'
     end
@@ -36,6 +36,13 @@ object FormMain: TFormMain
       Height = 24
       Caption = 'Abrir...'
       Flat = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWhite
+      Font.Height = -12
+      Font.Name = 'Segoe UI'
+      Font.Style = []
+      ParentFont = False
+      StyleElements = [seClient, seBorder]
       OnClick = ActOpenExecute
     end
     object BtnBack: TSpeedButton
@@ -45,6 +52,13 @@ object FormMain: TFormMain
       Height = 24
       Caption = 'Voltar'
       Flat = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWhite
+      Font.Height = -12
+      Font.Name = 'Segoe UI'
+      Font.Style = []
+      ParentFont = False
+      StyleElements = [seClient, seBorder]
       OnClick = ActBackExecute
     end
     object BtnScrollTop: TSpeedButton
@@ -54,6 +68,13 @@ object FormMain: TFormMain
       Height = 24
       Caption = 'Topo'
       Flat = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWhite
+      Font.Height = -12
+      Font.Name = 'Segoe UI'
+      Font.Style = []
+      ParentFont = False
+      StyleElements = [seClient, seBorder]
       OnClick = ActScrollTopExecute
     end
     object BtnReload: TSpeedButton
@@ -63,6 +84,13 @@ object FormMain: TFormMain
       Height = 24
       Caption = 'Atualizar'
       Flat = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWhite
+      Font.Height = -12
+      Font.Name = 'Segoe UI'
+      Font.Style = []
+      ParentFont = False
+      StyleElements = [seClient, seBorder]
       OnClick = ActReloadExecute
     end
     object BtnPrint: TSpeedButton
@@ -72,6 +100,13 @@ object FormMain: TFormMain
       Height = 24
       Caption = 'Imprimir'
       Flat = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWhite
+      Font.Height = -12
+      Font.Name = 'Segoe UI'
+      Font.Style = []
+      ParentFont = False
+      StyleElements = [seClient, seBorder]
       OnClick = ActPrintExecute
     end
     object BtnExportPdf: TSpeedButton
@@ -81,6 +116,13 @@ object FormMain: TFormMain
       Height = 24
       Caption = 'Salvar PDF'
       Flat = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWhite
+      Font.Height = -12
+      Font.Name = 'Segoe UI'
+      Font.Style = []
+      ParentFont = False
+      StyleElements = [seClient, seBorder]
       OnClick = ActExportPdfExecute
     end
     object ComboStyles: TComboBox
@@ -117,6 +159,9 @@ object FormMain: TFormMain
     Height = 668
     Align = alClient
     TabOrder = 1
+    AllowSingleSignOnUsingOSPrimaryAccount = False
+    TargetCompatibleBrowserVersion = '137.0.3296.44'
+    UserDataFolder = '%LOCALAPPDATA%\MDviu.exe.WebView2'
     OnCreateWebViewCompleted = EdgeBrowser1CreateWebViewCompleted
     OnNavigationCompleted = EdgeBrowser1NavigationCompleted
     OnNewWindowRequested = EdgeBrowser1NewWindowRequested
@@ -157,11 +202,11 @@ object FormMain: TFormMain
     end
   end
   object OpenDialog1: TOpenDialog
-    Filter =
-      'Arquivos Markdown (*.md)|*.md|Linguagens (*.pas;*.dpr;*.dfm;*.py;*.' +
-      'html;*.htm;*.js;*.ts;*.css;*.php;*.sql;*.ini;*.asp;*.vbs;*.vb;*.txt)' +
-      '|*.pas;*.dpr;*.dfm;*.py;*.html;*.htm;*.js;*.ts;*.css;*.php;*.sql;*.' +
-      'ini;*.asp;*.vbs;*.vb;*.txt|Todos os arquivos (*.*)|*.*'
+    Filter = 
+      'Arquivos Markdown (*.md)|*.md|Linguagens (*.pas;*.dpr;*.dfm;*.py' +
+      ';*.html;*.htm;*.js;*.ts;*.css;*.php;*.sql;*.ini;*.asp;*.vbs;*.vb' +
+      ';*.txt)|*.pas;*.dpr;*.dfm;*.py;*.html;*.htm;*.js;*.ts;*.css;*.ph' +
+      'p;*.sql;*.ini;*.asp;*.vbs;*.vb;*.txt|Todos os arquivos (*.*)|*.*'
     Title = 'Abrir arquivo Markdown'
     Left = 120
     Top = 72

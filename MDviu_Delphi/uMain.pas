@@ -8,7 +8,7 @@ uses
   Vcl.Edge, Winapi.WebView2, System.IOUtils, System.JSON, Vcl.ActnList,
   Vcl.Menus, System.Actions, Vcl.StdCtrls, Vcl.ExtCtrls, System.Generics.Collections,
   System.StrUtils, Winapi.ShellAPI, Vcl.Buttons,
-  System.NetEncoding, System.RegularExpressions, Vcl.Clipbrd;
+  System.NetEncoding, System.RegularExpressions, Vcl.Clipbrd, Winapi.ActiveX;
 
 const
   // Sufixo que marca qual arquivo de web\styles\*.css e o default (selecionado
