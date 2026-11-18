@@ -8,7 +8,8 @@ uses
   Vcl.Edge, Winapi.WebView2, System.IOUtils, System.JSON, Vcl.ActnList,
   Vcl.Menus, System.Actions, Vcl.StdCtrls, Vcl.ExtCtrls, System.Generics.Collections,
   System.StrUtils, Winapi.ShellAPI, Vcl.Buttons,
-  System.NetEncoding, System.RegularExpressions, Vcl.Clipbrd, Winapi.ActiveX;
+  System.NetEncoding, System.RegularExpressions, Vcl.Clipbrd, Winapi.ActiveX,
+  Winapi.DwmApi;
 
 const
   // Sufixo que marca qual arquivo de web\styles\*.css e o default (selecionado
@@ -64,6 +65,7 @@ type
     FWebFolder: string;        // pasta do .exe (lib\, styles\ moram direto nela)
     FStylesFolder: string;     // styles\ — cada arquivo .css de dentro vira uma opcao
     FCurrentStyleName: string; // nome do ARQUIVO do estilo selecionado (sem ".css", com "_DEF" se tiver)
+    FWindowRevealed: Boolean;  // janela ja revelada (ver CreateWnd) — se o VCL recriar a janela depois, nao encobre de novo
     FStyleFileNames: TStringList; // nome de arquivo de cada item da combo, na mesma ordem/indice —
                                    // a combo mostra o nome sem "_DEF" (so estetica), o arquivo no disco mantem o sufixo
 
@@ -79,6 +81,10 @@ type
     procedure OpenFile(const APath: string);
     procedure ApplyPageColors;
     function DroppedFilePath(Args: TWebMessageReceivedEventArgs): string;
+    procedure WMRevealWindow(var Msg: TMessage); message WM_APP + 1;
+  protected
+    procedure CreateWnd; override;
+    procedure DoShow; override;
   public
   end;
 
@@ -166,6 +172,42 @@ begin
     StrToInt('$' + Copy(Hex, 5, 2)));
 end;
 
+// Primeiro quadro sem "piscada" branca: no Windows 11 o compositor (DWM)
+// mostra a janela nova em BRANCO ate o programa desenhar o primeiro quadro
+// (a cor de fundo da classe da janela nao e usada nesse instante). Tecnica
+// documentada pra isso: criar a janela "encoberta" (DWMWA_CLOAK) e so
+// revelar depois de desenhada. CreateWnd encobre; DoShow agenda a revelacao
+// (mensagem postada, processada depois do Show); WMRevealWindow forca o
+// desenho da janela inteira e revela.
+procedure TFormMain.CreateWnd;
+var
+  Cloak: BOOL;
+begin
+  inherited;
+  if FWindowRevealed then
+    Exit;
+  Cloak := True;
+  DwmSetWindowAttribute(Handle, DWMWA_CLOAK, @Cloak, SizeOf(Cloak));
+end;
+
+procedure TFormMain.DoShow;
+begin
+  inherited;
+  if not FWindowRevealed then
+    PostMessage(Handle, WM_APP + 1, 0, 0);
+end;
+
+procedure TFormMain.WMRevealWindow(var Msg: TMessage);
+var
+  Cloak: BOOL;
+begin
+  RedrawWindow(Handle, nil, 0, RDW_INVALIDATE or RDW_ERASE or RDW_FRAME or
+    RDW_ALLCHILDREN or RDW_UPDATENOW);
+  Cloak := False;
+  DwmSetWindowAttribute(Handle, DWMWA_CLOAK, @Cloak, SizeOf(Cloak));
+  FWindowRevealed := True;
+end;
+
 // Os componentes visuais estao todos no uMain.dfm. Estilo VCL e icone vem do
 // projeto (MDviu.dproj, aplicados no MDviu.dpr/recurso), nao de arquivo solto.
 procedure TFormMain.FormCreate(Sender: TObject);
@@ -204,9 +246,9 @@ begin
   EdgeBrowser1.CreateWebView;
 end;
 
-// Cor de fundo do WebView2 (mostrada antes de a pagina pintar) e esquema de
-// cor claro/escuro conforme o estilo atual. Sem o esquema fixo, com o Windows
-// em tema escuro o Chromium mostra um fundo preto (#121212) antes do documento.
+// Cor de fundo do WebView2 (mostrada antes de a pagina pintar), conforme o
+// estilo atual, e esquema de cor fixo em claro. Sem isso, com o Windows em
+// tema escuro o Chromium mostra um fundo preto (#121212) antes do documento.
 procedure TFormMain.ApplyPageColors;
 var
   IsDark: Boolean;
@@ -228,14 +270,14 @@ begin
     Controller2.Set_DefaultBackgroundColor(BgColor);
   end;
 
+  // Esquema sempre CLARO, mesmo em estilo escuro: no esquema escuro o
+  // Chromium pinta a pagina em branco inicial (about:blank) com o #121212
+  // dele, ignorando o DefaultBackgroundColor; no claro ela fica sem fundo
+  // e aparece a cor acima. As cores do documento vem do CSS do estilo
+  // (nenhum usa prefers-color-scheme), entao o estilo escuro continua escuro.
   if Supports(EdgeBrowser1.DefaultInterface, ICoreWebView2_13, WebView13) and
     (WebView13.Get_Profile(Profile) = S_OK) and (Profile <> nil) then
-  begin
-    if IsDark then
-      Profile.Set_PreferredColorScheme(COREWEBVIEW2_PREFERRED_COLOR_SCHEME_DARK)
-    else
-      Profile.Set_PreferredColorScheme(COREWEBVIEW2_PREFERRED_COLOR_SCHEME_LIGHT);
-  end;
+    Profile.Set_PreferredColorScheme(COREWEBVIEW2_PREFERRED_COLOR_SCHEME_LIGHT);
 end;
 
 procedure TFormMain.FormDestroy(Sender: TObject);

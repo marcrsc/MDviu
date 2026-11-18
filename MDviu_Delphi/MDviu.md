@@ -465,9 +465,17 @@ Histórico util pra nao redescobrir os mesmos problemas:
     Agora tudo usa a cor de fundo do `body` do estilo atual
     (`StylePageColors` le do CSS): `Color` do form, variavel
     `WEBVIEW2_DEFAULT_BACKGROUND_COLOR` antes de criar o WebView2,
-    `DefaultBackgroundColor` + `PreferredColorScheme` (claro/escuro conforme
-    `--mdviu-theme`) em `ApplyPageColors`, e o CSS ja embutido na pagina
-    inicial. Sobra so o 1o quadro da janela (~0,1 s) antes da barra pintar.
+    `DefaultBackgroundColor` em `ApplyPageColors`, e o CSS ja embutido na
+    pagina inicial. `PreferredColorScheme` fica **sempre claro**, mesmo em
+    estilo escuro: no esquema escuro o Chromium pinta a pagina em branco
+    inicial (`about:blank`) com o `#121212` dele, ignorando o
+    `DefaultBackgroundColor` (nenhum CSS usa `prefers-color-scheme`, entao
+    o estilo escuro continua escuro). O 1o quadro da janela o Windows 11
+    mostrava em branco antes de o form se desenhar (a cor de fundo da
+    classe da janela nao adianta): a janela nasce encoberta
+    (`DWMWA_CLOAK` em `CreateWnd`) e so e revelada depois de desenhada
+    (`DoShow` posta `WMRevealWindow`). Verificado gravando a abertura com
+    Claro e Escuro como padrao, Windows em tema escuro.
 
 ## Como compilar
 

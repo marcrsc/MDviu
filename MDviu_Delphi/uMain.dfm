@@ -1,6 +1,7 @@
 object FormMain: TFormMain
   Left = 0
   Top = 0
+  ActiveControl = EdgeBrowser1
   Caption = 'MDviu'
   ClientHeight = 700
   ClientWidth = 900
