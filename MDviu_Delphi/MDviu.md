@@ -115,7 +115,7 @@ Fluxo de carregamento:
 | Topo | — | Rola o conteudo de volta pro inicio |
 | Atualizar | F5 | Rele o `.md` e o CSS selecionado do disco, sem mexer na rolagem atual |
 | Imprimir | Ctrl+P | Abre a impressao nativa do WebView2 (com preview) |
-| Salvar PDF | Ctrl+Shift+P | Exporta PDF direto, sem dialogo, ao lado do `.md` |
+| Salvar PDF | Ctrl+Shift+P | Exporta PDF direto, sem dialogo, ao lado do `.md` (mesmo nome, `.pdf`). Se o PDF ja existe, pergunta "Substituir?" (Sim substitui; Nao, o padrao, cancela sem gerar nada) |
 
 **Arrastar arquivo** pra janela abre igual ao "Abrir..." (so o primeiro, se
 vierem varios). O JS nao ve o caminho real do arquivo solto; `script.js`
@@ -287,9 +287,12 @@ markdown-it — nao interpreta `==`, `_`, tabela etc. dentro do arquivo, mostra
 o conteudo inteiro como esta no disco. `LanguageForExtension` (`uMain.pas`)
 decide isso pela extensao do arquivo, nao importa como foi aberto:
 
-- **Botao "Abrir..."**: o dialogo tem 3 opcoes em "Tipo" — "Arquivos Markdown
-  (\*.md)" (**default**, igual sempre foi), "Linguagens" (filtra so as
-  extensoes da tabela abaixo) e "Todos os arquivos".
+- **Botao "Abrir..."**: o dialogo tem 3 opcoes em "Tipo" — "Arquivos
+  Markdown" (`*.md`, **default**), "Codigo-fonte e texto" (filtra so as
+  extensoes da tabela abaixo) e "Todos os arquivos" (`*.*`). Os nomes nao
+  mostram as extensoes, so filtram. O filtro fica no `OpenDialog1.Filter`
+  (`uMain.dfm`) e tem que bater com `LanguageForExtension`.
+- **Arrastar o arquivo pra janela**: mesmo caminho do "Abrir...".
 - **Link dentro de um `.md`** (ex.: `[veja](exemplo.pas)`): `OpenRelatedMdFile`
   nao faz distincao de extensao — qualquer link local cai no mesmo
   `RenderCurrentFile` que decide o highlight, entao um link pra `.pas` ja
@@ -299,19 +302,34 @@ decide isso pela extensao do arquivo, nao importa como foi aberto:
 
 | Extensao | Linguagem (highlight.js) |
 |---|---|
-| `.pas`, `.dpr`, `.dfm` | Delphi/Pascal (`delphi`) |
-| `.py` | Python |
+| `.pas`, `.dpr`, `.dfm`, `.dpk`, `.inc` | Delphi/Pascal (`delphi`) |
 | `.html`, `.htm` | HTML |
 | `.js` | JavaScript |
 | `.ts` | TypeScript |
 | `.css` | CSS |
 | `.php` | PHP |
-| `.sql` | SQL |
-| `.ini` | INI |
 | `.asp` | ASP classico (`vbscript-html`) |
+| `.json` | JSON |
+| `.xml`, `.dproj`, `.groupproj`, `.config`, `.manifest`, `.svg`, `.xsd`, `.xsl` | XML (`xml`) |
+| `.yml`, `.yaml` | YAML |
+| `.ini`, `.toml` | INI/TOML (`ini`) |
+| `.sql` | SQL |
+| `.bat`, `.cmd` | Batch do Windows (`dos`) |
+| `.ps1` | PowerShell |
+| `.sh` | Bash |
+| `.py` | Python |
 | `.vbs` | VBScript |
 | `.vb` | VB.NET |
-| `.txt` | Sem cor (`plaintext`) — so pra caber no mesmo dialogo/fluxo |
+| `.cs` | C# |
+| `.java` | Java |
+| `.cpp`, `.h` | C++ (`cpp`) |
+| `.diff`, `.patch` | Diff |
+| `.txt`, `.log`, `.csv` | Sem cor (`plaintext`) — abre como texto puro com "Copiar", em vez de virar Markdown |
+
+`.svg` aberto direto mostra o codigo XML; dentro de um `.md`
+(`![](figura.svg)`) continua aparecendo como imagem. Arquivo muito grande
+(ex.: `.log` de dezenas de MB) deixa a abertura lenta: o texto inteiro vai
+pro WebView2 e o highlight colore tudo de uma vez.
 
 Extensao fora dessa lista (inclusive `.md`) continua sendo tratada como
 Markdown, igual sempre foi.
@@ -322,8 +340,13 @@ Todo `<pre>` (bloco de codigo com ou sem highlight — fenced do markdown-it
 ou arquivo de codigo-fonte aberto direto, ver secao anterior) ganha um
 botao "Copiar" no canto superior direito, visivel so no hover do bloco
 (`addCopyButtons()`/`injectCopyButtonStyle()` em `lib\script.js` — estilo
-proprio, nao depende dos 3 CSS do projeto). Copia o texto puro (sem as tags
-de cor do highlight).
+proprio, nao depende dos CSS do projeto). Posicao: dentro da caixa do
+codigo, afastado da moldura (o `padding` do `pre` de cada CSS) por metade da
+espessura dela, em cima e na direita — `addCopyButtons()` le o `padding` do
+`pre` em tempo de execucao e poe o botao a 1,5x dele (+2px em cima, ajuste
+visual), entao acompanha cada estilo. A largura e fixada pela do texto
+"Copiado!" (medida ao criar o botao), pra borda esquerda nao pular no
+clique. Copia o texto puro (sem as tags de cor do highlight).
 
 Dois jeitos de copiar, o segundo so entra se o primeiro falhar:
 

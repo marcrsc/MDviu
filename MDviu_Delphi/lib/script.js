@@ -20,7 +20,9 @@ const ENABLE_SYNTAX_HIGHLIGHT = true;
         "font-size:.75em;font-family:\"Segoe UI\",Calibri,Arial,sans-serif;color:#fff;" +
         "background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.3);border-radius:3px;" +
         "cursor:pointer;opacity:0;transition:opacity .15s ease}" +
-        "pre:hover .mdviu-copy-btn,.mdviu-copy-btn:focus{opacity:1}" +
+        // :focus-visible (nao :focus): visivel com foco de TECLADO (Tab); o
+        // foco que sobra do clique nao prende o botao na tela sem o mouse.
+        "pre:hover .mdviu-copy-btn,.mdviu-copy-btn:focus-visible{opacity:1}" +
         ".mdviu-copy-btn:hover{background:rgba(0,0,0,.75)}";
     document.head.appendChild(style);
 })();
@@ -279,14 +281,28 @@ function finishRender(fullPath, filename, isBack, anchor) {
 // Botao "Copiar" em todo <pre> (bloco de codigo com ou sem highlight — tanto
 // faz vir do markdown-it/fence quanto de renderSource()). Copia o TEXTO puro
 // (codeEl.textContent ignora as <span> de cor do highlight.js).
+// Posicao: dentro da caixa do codigo, afastado da moldura (o padding do
+// <pre>, definido em cada CSS de styles\) por metade da espessura dela —
+// ou seja, a 1,5x o padding a partir da borda do <pre>. Lido do CSS em
+// tempo de execucao, entao acompanha cada estilo sem numero fixo aqui.
 function addCopyButtons() {
     contentEl.querySelectorAll("pre").forEach((pre) => {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "mdviu-copy-btn";
         btn.textContent = "Copiar";
+        const preStyle = getComputedStyle(pre);
+        // +2px em cima: ajuste visual fino, conferido na tela.
+        btn.style.top = (parseFloat(preStyle.paddingTop) || 0) * 1.5 + 2 + "px";
+        btn.style.right = (parseFloat(preStyle.paddingRight) || 0) * 1.5 + "px";
         btn.addEventListener("click", () => copyCodeBlock(pre, btn));
         pre.appendChild(btn);
+        // Mesma largura pra "Copiar" e "Copiado!" (sem a borda esquerda pular
+        // no clique): mede o botao com o texto maior, fixa essa largura e
+        // volta pro texto normal (centralizado, padrao do <button>).
+        btn.textContent = "Copiado!";
+        btn.style.width = Math.ceil(btn.getBoundingClientRect().width) + "px";
+        btn.textContent = "Copiar";
     });
 }
 

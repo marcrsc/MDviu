@@ -146,10 +146,10 @@ th {
    7. BLOCOS DE CODIGO e CODIGO INLINE
    ------------------------------------------------------------------------- */
 pre {
-    background-color: #f5f5f5;
-    border: 1px solid #dddddd;
+    background-color: #e0e0e0;
+    border: 1px solid #c4c4c4;
     border-radius: 3px;
-    padding: 0.6em;
+    padding: 0.3em;
     overflow-x: auto;
     margin: 0.7em 0;
 }

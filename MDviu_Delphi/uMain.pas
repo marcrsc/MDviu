@@ -30,6 +30,8 @@ type
     BtnExportPdf: TSpeedButton;
     ChkNewWindow: TCheckBox;
     ChkHtml: TCheckBox;
+    LblNewWindow: TLabel;
+    LblHtml: TLabel;
     EdgeBrowser1: TEdgeBrowser;
     ActionList1: TActionList;
     ActOpen: TAction;
@@ -43,6 +45,7 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure ComboStylesChange(Sender: TObject);
     procedure ChkHtmlClick(Sender: TObject);
+    procedure LblCheckClick(Sender: TObject);
     procedure EdgeBrowser1CreateWebViewCompleted(Sender: TCustomEdgeBrowser; AResult: HResult);
     procedure EdgeBrowser1NavigationCompleted(Sender: TCustomEdgeBrowser; IsSuccess: Boolean;
       WebErrorStatus: COREWEBVIEW2_WEB_ERROR_STATUS);
@@ -65,6 +68,7 @@ type
     FWebFolder: string;        // pasta do .exe (lib\, styles\ moram direto nela)
     FStylesFolder: string;     // styles\ — cada arquivo .css de dentro vira uma opcao
     FCurrentStyleName: string; // nome do ARQUIVO do estilo selecionado (sem ".css", com "_DEF" se tiver)
+    FPdfPath: string;          // PDF sendo gerado pelo "Salvar PDF" (pra mensagem de conclusao)
     FWindowRevealed: Boolean;  // janela ja revelada (ver CreateWnd) — se o VCL recriar a janela depois, nao encobre de novo
     FStyleFileNames: TStringList; // nome de arquivo de cada item da combo, na mesma ordem/indice —
                                    // a combo mostra o nome sem "_DEF" (so estetica), o arquivo no disco mantem o sufixo
@@ -129,20 +133,39 @@ end;
 // codigo-fonte reconhecido, continua tratado como Markdown (comportamento
 // de sempre). Usado tanto no botao "Abrir..." quanto em link local clicado
 // dentro de um .md (ambos passam por RenderCurrentFile).
+// Ao incluir extensao aqui, incluir tambem no filtro "Codigo-fonte e texto"
+// do OpenDialog1 (uMain.dfm) e na tabela de MDviu.md.
 function LanguageForExtension(const AExt: string): string;
 const
-  Exts: array[0..15] of string = ('.pas', '.dpr', '.dfm', '.py', '.html', '.htm',
-    '.js', '.ts', '.css', '.php', '.sql', '.ini', '.asp', '.vbs', '.vb', '.txt');
-  Langs: array[0..15] of string = ('delphi', 'delphi', 'delphi', 'python', 'html', 'html',
-    'javascript', 'typescript', 'css', 'php', 'sql', 'ini', 'vbscript-html', 'vbscript', 'vbnet',
-    'plaintext');
+  // Pares (extensao, linguagem do highlight.js).
+  ExtLang: array[0..41, 0..1] of string = (
+    // Delphi
+    ('.pas', 'delphi'), ('.dpr', 'delphi'), ('.dfm', 'delphi'), ('.dpk', 'delphi'),
+    ('.inc', 'delphi'),
+    // Web
+    ('.html', 'html'), ('.htm', 'html'), ('.js', 'javascript'), ('.ts', 'typescript'),
+    ('.css', 'css'), ('.php', 'php'), ('.asp', 'vbscript-html'),
+    // Dados e configuracao
+    ('.json', 'json'), ('.xml', 'xml'), ('.dproj', 'xml'), ('.groupproj', 'xml'),
+    ('.config', 'xml'), ('.manifest', 'xml'), ('.svg', 'xml'), ('.xsd', 'xml'),
+    ('.xsl', 'xml'), ('.yml', 'yaml'), ('.yaml', 'yaml'), ('.ini', 'ini'),
+    ('.toml', 'ini'), ('.sql', 'sql'),
+    // Scripts
+    ('.bat', 'dos'), ('.cmd', 'dos'), ('.ps1', 'powershell'), ('.sh', 'bash'),
+    ('.py', 'python'), ('.vbs', 'vbscript'),
+    // Outras linguagens
+    ('.vb', 'vbnet'), ('.cs', 'csharp'), ('.java', 'java'), ('.cpp', 'cpp'),
+    ('.h', 'cpp'),
+    // Texto sem cor (abre como bloco de codigo, nao como Markdown)
+    ('.txt', 'plaintext'), ('.log', 'plaintext'), ('.csv', 'plaintext'),
+    ('.diff', 'diff'), ('.patch', 'diff'));
 var
   I: Integer;
 begin
   Result := '';
-  for I := Low(Exts) to High(Exts) do
-    if Exts[I] = AExt then
-      Exit(Langs[I]);
+  for I := Low(ExtLang) to High(ExtLang) do
+    if ExtLang[I, 0] = AExt then
+      Exit(ExtLang[I, 1]);
 end;
 
 // Le do CSS do estilo se ele e escuro (--mdviu-theme: dark) e a cor de fundo
@@ -350,6 +373,17 @@ begin
   RenderCurrentFile; // so re-renderiza o arquivo atual com o novo estado do HTML cru
 end;
 
+// Os checkboxes da barra sao so a caixinha; o texto e um TLabel ao lado (com
+// fonte menor, o texto do proprio TCheckBox desalinhava da caixa). Clicar no
+// texto marca/desmarca a caixa, como no checkbox comum (o OnClick dela roda).
+procedure TFormMain.LblCheckClick(Sender: TObject);
+begin
+  if Sender = LblNewWindow then
+    ChkNewWindow.Checked := not ChkNewWindow.Checked
+  else if Sender = LblHtml then
+    ChkHtml.Checked := not ChkHtml.Checked;
+end;
+
 function TFormMain.ReadWebFile(const AFileName: string): string;
 var
   FullPath: string;
@@ -529,7 +563,8 @@ begin
       FPendingAnchor := '';
     end;
 
-    Caption := 'MDviu - ' + FileName;
+    // Nome do programa e caminho completo do arquivo aberto.
+    Caption := 'MDviu - ' + FCurrentMDPath;
 
     // Sem isso o foco fica no ultimo controle da toolbar (ex.: combo de
     // estilo, primeiro TabStop criado) em vez do conteudo exibido.
@@ -709,7 +744,7 @@ procedure TFormMain.EdgeBrowser1PrintToPDFCompleted(Sender: TCustomEdgeBrowser;
   ErrorCode: HResult; IsSuccessful: Boolean);
 begin
   if IsSuccessful then
-    ShowMessage('PDF salvo em: ' + ChangeFileExt(FCurrentMDPath, '.pdf'))
+    ShowMessage('PDF salvo em: ' + FPdfPath)
   else
     ShowMessage('Falha ao gerar o PDF.');
 end;
@@ -750,7 +785,17 @@ begin
 
   Settings.Set_ShouldPrintBackgrounds(1);
 
+  // Sem dialogo de "Salvar como" (de proposito, um clique so); so pergunta
+  // se o PDF ja existe: Sim substitui, Nao cancela sem gerar nada. Caixa
+  // nativa do Windows (botoes no idioma do sistema — o MessageDlg do VCL
+  // sai em ingles), com "Nao" como padrao.
   PdfPath := ChangeFileExt(FCurrentMDPath, '.pdf');
+  if TFile.Exists(PdfPath) and
+    (Application.MessageBox(PChar(ExtractFileName(PdfPath) + ' ja existe. Substituir?'),
+      'Salvar PDF', MB_YESNO or MB_ICONQUESTION or MB_DEFBUTTON2) <> IDYES) then
+    Exit;
+
+  FPdfPath := PdfPath; // a mensagem de conclusao usa este, nao o arquivo aberto na hora
   EdgeBrowser1.PrintToPDF(PdfPath, Settings);
 end;
 

@@ -158,10 +158,10 @@ pre {
        tema de highlight (.hljs, #f3f3f3) — e essa diferenca de tom (nao so
        a borda de 1px) que da a "moldura" visivel, igual ja acontece sozinho
        no Escuro (pre #2a2a2a ao redor do .hljs #0d1117, bem mais escuro). */
-    background-color: #e8e8e8;
-    border: 1px solid #cccccc;
+    background-color: #e0e0e0;
+    border: 1px solid #c4c4c4;
     border-radius: 4px;
-    padding: 1em;
+    padding: 0.5em;
     overflow-x: auto;
     margin: 1.5em 0;
 }

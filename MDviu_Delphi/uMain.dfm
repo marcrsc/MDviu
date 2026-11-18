@@ -26,9 +26,39 @@ object FormMain: TFormMain
     object LblStyle: TLabel
       Left = 8
       Top = 7
-      Width = 31
+      Width = 28
       Height = 15
-      Caption = 'Estilo:'
+      Caption = 'Estilo'
+    end
+    object LblNewWindow: TLabel
+      Left = 724
+      Top = 9
+      Width = 60
+      Height = 13
+      Cursor = crHandPoint
+      Caption = 'Nova janela'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -11
+      Font.Name = 'Segoe UI'
+      Font.Style = []
+      ParentFont = False
+      OnClick = LblCheckClick
+    end
+    object LblHtml: TLabel
+      Left = 825
+      Top = 9
+      Width = 28
+      Height = 13
+      Cursor = crHandPoint
+      Caption = 'HTML'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -11
+      Font.Name = 'Segoe UI'
+      Font.Style = []
+      ParentFont = False
+      OnClick = LblCheckClick
     end
     object BtnOpen: TSpeedButton
       Left = 224
@@ -127,7 +157,7 @@ object FormMain: TFormMain
       OnClick = ActExportPdfExecute
     end
     object ComboStyles: TComboBox
-      Left = 50
+      Left = 41
       Top = 5
       Width = 160
       Height = 23
@@ -137,18 +167,16 @@ object FormMain: TFormMain
     end
     object ChkNewWindow: TCheckBox
       Left = 704
-      Top = 8
-      Width = 95
+      Top = 9
+      Width = 17
       Height = 17
-      Caption = 'Nova janela'
       TabOrder = 1
     end
     object ChkHtml: TCheckBox
       Left = 805
-      Top = 8
-      Width = 60
+      Top = 9
+      Width = 17
       Height = 17
-      Caption = 'HTML'
       TabOrder = 2
       OnClick = ChkHtmlClick
     end
@@ -204,10 +232,12 @@ object FormMain: TFormMain
   end
   object OpenDialog1: TOpenDialog
     Filter = 
-      'Arquivos Markdown (*.md)|*.md|Linguagens (*.pas;*.dpr;*.dfm;*.py' +
-      ';*.html;*.htm;*.js;*.ts;*.css;*.php;*.sql;*.ini;*.asp;*.vbs;*.vb' +
-      ';*.txt)|*.pas;*.dpr;*.dfm;*.py;*.html;*.htm;*.js;*.ts;*.css;*.ph' +
-      'p;*.sql;*.ini;*.asp;*.vbs;*.vb;*.txt|Todos os arquivos (*.*)|*.*'
+      'Arquivos Markdown|*.md|Codigo-fonte e texto|*.pas;*.dpr;*.dfm;*.' +
+      'dpk;*.inc;*.html;*.htm;*.js;*.ts;*.css;*.php;*.asp;*.json;*.xml;' +
+      '*.dproj;*.groupproj;*.config;*.manifest;*.svg;*.xsd;*.xsl;*.yml;' +
+      '*.yaml;*.ini;*.toml;*.sql;*.bat;*.cmd;*.ps1;*.sh;*.py;*.vbs;*.vb' +
+      ';*.cs;*.java;*.cpp;*.h;*.txt;*.log;*.csv;*.diff;*.patch|Todos os' +
+      ' arquivos|*.*'
     Title = 'Abrir arquivo Markdown'
     Left = 120
     Top = 72
