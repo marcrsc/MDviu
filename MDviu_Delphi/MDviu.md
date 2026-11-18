@@ -27,7 +27,8 @@ construido em Delphi (RAD Studio 37.0) usando `TEdgeBrowser` (WebView2).
 ## Visao geral
 
 Abre com duplo clique (apos associar a extensao `.md` nas propriedades do
-Windows) ou pelo botao "Abrir...". Le o `.md` e o CSS selecionado direto do
+Windows), pelo botao "Abrir..." ou arrastando o arquivo pra janela (ver
+[Barra de ferramentas e atalhos](#barra-de-ferramentas-e-atalhos)). Le o `.md` e o CSS selecionado direto do
 disco a cada carga e a cada F5 — nao ha cache, nao ha passo de build.
 
 ## Requisitos
@@ -90,10 +91,15 @@ Projeto Delphi VCL padrao, como feito pela IDE:
 Fluxo de carregamento:
 
 1. O `.dfm` cria a tela; `FormCreate` le os parametros, preenche a combo de
-   estilos CSS (`PopulateStyles`) e chama `CreateWebView`.
-2. `OnCreateWebViewCompleted` dispara `BuildShellAndNavigate`: monta uma
-   pagina HTML (com o `markdown-it.min.js` e o `script.js` embutidos
-   inline) e chama `NavigateToString` — so acontece uma vez, por processo.
+   estilos CSS (`PopulateStyles`), pinta o fundo da janela com a cor do
+   estilo e define `WEBVIEW2_DEFAULT_BACKGROUND_COLOR` (abertura sem
+   "piscada", ver bug 13 em [Bugs importantes ja corrigidos](#bugs-importantes-ja-corrigidos))
+   e chama `CreateWebView`.
+2. `OnCreateWebViewCompleted` chama `ApplyPageColors` (cor de fundo e
+   esquema claro/escuro do WebView2) e `BuildShellAndNavigate`: monta uma
+   pagina HTML (com o `markdown-it.min.js`, o `script.js` e o CSS do estilo
+   atual embutidos inline) e chama `NavigateToString` — so acontece uma
+   vez, por processo.
 3. `OnNavigationCompleted` dispara `RenderCurrentFile`: le o `.md` e o CSS
    selecionado do disco e manda os dois pro JS via `ExecuteScript`,
    chamando `setStyle(css)` e `renderMD(texto, nomeArquivo)`.
@@ -111,12 +117,19 @@ Fluxo de carregamento:
 | Imprimir | Ctrl+P | Abre a impressao nativa do WebView2 (com preview) |
 | Salvar PDF | Ctrl+Shift+P | Exporta PDF direto, sem dialogo, ao lado do `.md` |
 
+**Arrastar arquivo** pra janela abre igual ao "Abrir..." (so o primeiro, se
+vierem varios). O JS nao ve o caminho real do arquivo solto; `script.js`
+manda o `File` por `postMessageWithAdditionalObjects` e o Delphi le o
+caminho do `ICoreWebView2File` (`DroppedFilePath` em `uMain.pas`) — por
+isso F5 e "Voltar" funcionam normalmente depois. Exige WebView2 Runtime
+recente; em runtime antigo, soltar o arquivo nao faz nada.
+
 "Voltar" empilha em `FHistory` (sem limite) toda vez que voce abre outro
-arquivo (link ou "Abrir...") — funciona pra cadeia inteira de arquivos
+arquivo (link, "Abrir..." ou arrastar) — funciona pra cadeia inteira de arquivos
 visitados nesta janela, nao so um passo. So esvazia fechando a janela
 (processo novo = pilha nova).
 
-**Rolagem**: abrir um arquivo novo (Abrir, link, duplo clique) sempre
+**Rolagem**: abrir um arquivo novo (Abrir, link, duplo clique, arrastar) sempre
 comeca do topo. So "Voltar" restaura a posicao de rolagem exata de quando
 voce saiu daquele arquivo (guardada em `script.js`, por caminho completo,
 enquanto o processo estiver aberto). F5 e troca de estilo/caixa "HTML"
@@ -132,8 +145,8 @@ janela" controla o comportamento dos links pra outro `.md` (ver proxima
 secao) — desmarcada por padrao. A caixa "HTML" libera HTML cru no arquivo
 atual (ver [Destaque de texto](#destaque-de-texto) e a nota de seguranca
 logo abaixo) — tambem desmarcada por padrao, e volta a desmarcar sozinha
-toda vez que um arquivo diferente e aberto (Abrir, link pra outro `.md`,
-Voltar).
+toda vez que um arquivo diferente e aberto (Abrir, arrastar, link pra
+outro `.md`, Voltar).
 
 ## Como funcionam os links
 
@@ -335,6 +348,11 @@ Estilos ja incluidos:
 - `Claro_DEF.css` — claro, espacoso, prioriza legibilidade
 - `Escuro.css` — mesmo espacamento do Claro, cores invertidas pra fundo escuro
 - `Compacto.css` — claro, fontes e espacamentos menores
+- `Largo.css` — igual ao Claro, sem largura maxima (texto ocupa a janela toda)
+
+A largura maxima do texto e o `max-width` do `body` de cada CSS (860px no
+Claro, Escuro e Compacto); a coluna fica centralizada (`margin: 0 auto`).
+Nao vem do Markdown nem do markdown-it.
 
 Cada CSS e organizado em secoes numeradas comentadas (base, titulos,
 paragrafos, links, imagens, tabelas, codigo, destaques, regua horizontal) —
@@ -342,11 +360,6 @@ editar, salvar e apertar F5 no MDviu mostra o resultado na hora.
 
 ## Limitacoes conhecidas
 
-- **Arrastar arquivo pra janela** abre igual ao "Abrir..." (so o primeiro,
-  se vierem varios). O JS nao ve o caminho real; `script.js` manda o `File`
-  por `postMessageWithAdditionalObjects` e o Delphi le o caminho do
-  `ICoreWebView2File` (`DroppedFilePath` em `uMain.pas`). Exige WebView2
-  Runtime recente; em runtime antigo, soltar o arquivo nao faz nada.
 - Exportar PDF so tem os dois caminhos ja prontos (dialogo Ctrl+P e
   automatico Ctrl+Shift+P) — sem conversao em lote ainda.
 
@@ -439,9 +452,12 @@ Histórico util pra nao redescobrir os mesmos problemas:
     passou a ser 100% `.dfm`, e icone + estilo vem da configuracao do
     projeto (ver [Arquitetura](#arquitetura)). Com isso o manifesto
     (temas + `PerMonitorV2`) entra de proposito e o VCL escala a tela
-    sozinho em qualquer DPI. Diferenca visual esperada: os botoes da barra
-    agora sao pintados pelo tema Onyx Blue (texto cinza claro, hover azul
-    preenchido) em vez do azul fixo pintado na mao de antes.
+    sozinho em qualquer DPI. Os botoes da barra agora sao pintados pelo
+    tema Onyx Blue (hover azul preenchido) em vez do azul fixo pintado na
+    mao de antes. O texto cinza do tema ficava ilegivel; corrigido no
+    `.dfm` com `StyleElements = [seClient, seBorder]` (sem `seFont`) e
+    `Font.Color = clWhite` — so o texto fica branco, fundo/borda/hover
+    continuam do estilo.
 13. **"Piscada" na abertura** (cinza → branco → preto → documento) — cinza
     era o fundo do `TEdgeBrowser` (`Color` herdada do form) enquanto o
     WebView2 iniciava; branco, o fundo padrao do WebView2; preto (`#121212`),

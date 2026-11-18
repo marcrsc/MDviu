@@ -61,8 +61,9 @@ So pra **rodar** o MDviu (Delphi) ja compilado:
   Detalhe de cada um em
   [MDviu_Delphi/MDviu.md#arquivos-que-acompanham-o-exe](MDviu_Delphi/MDviu.md#arquivos-que-acompanham-o-exe).
 - Abrir um `.md`: duplo clique (apos associar a extensao ao `MDviu.exe` nas
-  propriedades do Windows), pelo botao "Abrir..." dentro do programa, ou
-  `MDviu.exe caminho\do\arquivo.md` pela linha de comando.
+  propriedades do Windows), pelo botao "Abrir..." dentro do programa,
+  arrastando o arquivo pra janela, ou `MDviu.exe caminho\do\arquivo.md`
+  pela linha de comando.
 
 Para compilar, veja instrucoes em
 [MDviu_Delphi/MDviu.md#como-compilar](MDviu_Delphi/MDviu.md#como-compilar).
