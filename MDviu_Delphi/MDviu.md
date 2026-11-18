@@ -442,6 +442,16 @@ Histórico util pra nao redescobrir os mesmos problemas:
     sozinho em qualquer DPI. Diferenca visual esperada: os botoes da barra
     agora sao pintados pelo tema Onyx Blue (texto cinza claro, hover azul
     preenchido) em vez do azul fixo pintado na mao de antes.
+13. **"Piscada" na abertura** (cinza → branco → preto → documento) — cinza
+    era o fundo do `TEdgeBrowser` (`Color` herdada do form) enquanto o
+    WebView2 iniciava; branco, o fundo padrao do WebView2; preto (`#121212`),
+    o fundo do Chromium com o Windows em tema escuro antes da pagina pintar.
+    Agora tudo usa a cor de fundo do `body` do estilo atual
+    (`StylePageColors` le do CSS): `Color` do form, variavel
+    `WEBVIEW2_DEFAULT_BACKGROUND_COLOR` antes de criar o WebView2,
+    `DefaultBackgroundColor` + `PreferredColorScheme` (claro/escuro conforme
+    `--mdviu-theme`) em `ApplyPageColors`, e o CSS ja embutido na pagina
+    inicial. Sobra so o 1o quadro da janela (~0,1 s) antes da barra pintar.
 
 ## Como compilar
 

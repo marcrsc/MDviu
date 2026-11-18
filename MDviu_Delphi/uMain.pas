@@ -77,6 +77,7 @@ type
     procedure LaunchNewMDviuWindow(const AFilePath: string);
     procedure OpenRelatedMdFile(const AHref: string);
     procedure OpenFile(const APath: string);
+    procedure ApplyPageColors;
     function DroppedFilePath(Args: TWebMessageReceivedEventArgs): string;
   public
   end;
@@ -138,9 +139,39 @@ begin
       Exit(Langs[I]);
 end;
 
+// Le do CSS do estilo se ele e escuro (--mdviu-theme: dark) e a cor de fundo
+// do body (background/background-color em #rgb ou #rrggbb). Sem cor
+// declarada, usa branco ou #1e1e1e conforme o tema. Serve pra pintar o fundo
+// da janela e do WebView2 com a cor do documento enquanto ele carrega (sem a
+// "piscada" cinza/branca/preta na abertura).
+procedure StylePageColors(const ACss: string; out AIsDark: Boolean; out AColor: TColor);
+var
+  M: TMatch;
+  Hex: string;
+begin
+  AIsDark := TRegEx.IsMatch(ACss, '--mdviu-theme\s*:\s*dark', [roIgnoreCase]);
+  if AIsDark then
+    AColor := RGB($1E, $1E, $1E)
+  else
+    AColor := clWhite;
+
+  M := TRegEx.Match(ACss,
+    'body\s*\{[^}]*?background(?:-color)?\s*:\s*#([0-9a-f]{6}|[0-9a-f]{3})\b', [roIgnoreCase]);
+  if not M.Success then
+    Exit;
+  Hex := M.Groups[1].Value;
+  if Length(Hex) = 3 then
+    Hex := Hex[1] + Hex[1] + Hex[2] + Hex[2] + Hex[3] + Hex[3];
+  AColor := RGB(StrToInt('$' + Copy(Hex, 1, 2)), StrToInt('$' + Copy(Hex, 3, 2)),
+    StrToInt('$' + Copy(Hex, 5, 2)));
+end;
+
 // Os componentes visuais estao todos no uMain.dfm. Estilo VCL e icone vem do
 // projeto (MDviu.dproj, aplicados no MDviu.dpr/recurso), nao de arquivo solto.
 procedure TFormMain.FormCreate(Sender: TObject);
+var
+  IsDark: Boolean;
+  PageColor: TColor;
 begin
   FHistory := TStringList.Create;
   FStyleFileNames := TStringList.Create;
@@ -158,7 +189,53 @@ begin
   // TAction do ActionList1, no .dfm: reconhecidos pelo formulario
   // (Form.IsShortCut), o Vcl.Edge avisa o WebView2 que a tecla foi tratada.
   PopulateStyles;
+
+  // Abertura sem "piscada": ate o documento aparecer, tudo fica na cor de
+  // fundo do estilo escolhido. (1) O TEdgeBrowser pinta o fundo com a Color
+  // herdada do form (ParentColor) enquanto o WebView2 inicia; (2) a variavel
+  // WEBVIEW2_DEFAULT_BACKGROUND_COLOR (AARRGGBB, lida pelo WebView2 ao ser
+  // criado) evita o quadro branco inicial. O resto (cor depois de criado e
+  // esquema claro/escuro) fica em ApplyPageColors.
+  StylePageColors(ReadWebFile('styles\' + FCurrentStyleName + '.css'), IsDark, PageColor);
+  Color := PageColor;
+  SetEnvironmentVariable('WEBVIEW2_DEFAULT_BACKGROUND_COLOR',
+    PChar(Format('FF%.2x%.2x%.2x', [GetRValue(PageColor), GetGValue(PageColor), GetBValue(PageColor)])));
+
   EdgeBrowser1.CreateWebView;
+end;
+
+// Cor de fundo do WebView2 (mostrada antes de a pagina pintar) e esquema de
+// cor claro/escuro conforme o estilo atual. Sem o esquema fixo, com o Windows
+// em tema escuro o Chromium mostra um fundo preto (#121212) antes do documento.
+procedure TFormMain.ApplyPageColors;
+var
+  IsDark: Boolean;
+  PageColor: TColor;
+  Controller2: ICoreWebView2Controller2;
+  WebView13: ICoreWebView2_13;
+  Profile: ICoreWebView2Profile;
+  BgColor: COREWEBVIEW2_COLOR;
+begin
+  StylePageColors(ReadWebFile('styles\' + FCurrentStyleName + '.css'), IsDark, PageColor);
+  Color := PageColor;
+
+  if Supports(EdgeBrowser1.ControllerInterface, ICoreWebView2Controller2, Controller2) then
+  begin
+    BgColor.A := 255;
+    BgColor.R := GetRValue(PageColor);
+    BgColor.G := GetGValue(PageColor);
+    BgColor.B := GetBValue(PageColor);
+    Controller2.Set_DefaultBackgroundColor(BgColor);
+  end;
+
+  if Supports(EdgeBrowser1.DefaultInterface, ICoreWebView2_13, WebView13) and
+    (WebView13.Get_Profile(Profile) = S_OK) and (Profile <> nil) then
+  begin
+    if IsDark then
+      Profile.Set_PreferredColorScheme(COREWEBVIEW2_PREFERRED_COLOR_SCHEME_DARK)
+    else
+      Profile.Set_PreferredColorScheme(COREWEBVIEW2_PREFERRED_COLOR_SCHEME_LIGHT);
+  end;
 end;
 
 procedure TFormMain.FormDestroy(Sender: TObject);
@@ -222,6 +299,7 @@ begin
   if ComboStyles.ItemIndex < 0 then
     Exit;
   FCurrentStyleName := FStyleFileNames[ComboStyles.ItemIndex];
+  ApplyPageColors;
   RenderCurrentFile;
 end;
 
@@ -244,7 +322,7 @@ end;
 procedure TFormMain.BuildShellAndNavigate;
 var
   MarkdownItJs, HljsJs, ScriptJs, Shell: string;
-  HljsLightCss, HljsDarkCss: string;
+  HljsLightCss, HljsDarkCss, UserCss: string;
 begin
   // Protecao: um "</script" literal dentro do JS embutido fecharia a tag mais cedo.
   MarkdownItJs := StringReplace(ReadWebFile('lib\markdown-it.min.js'), '</script',
@@ -258,11 +336,15 @@ begin
     '<\/style', [rfReplaceAll, rfIgnoreCase]);
   HljsDarkCss := StringReplace(ReadWebFile('lib\highlight-dark.min.css'), '</style',
     '<\/style', [rfReplaceAll, rfIgnoreCase]);
+  // CSS do estilo atual ja na pagina inicial: a primeira pintura sai com o
+  // fundo certo (setStyle() depois so substitui pelo mesmo conteudo).
+  UserCss := StringReplace(ReadWebFile('styles\' + FCurrentStyleName + '.css'), '</style',
+    '<\/style', [rfReplaceAll, rfIgnoreCase]);
 
   Shell :=
     '<!DOCTYPE html>' +
     '<html lang="pt-BR"><head><meta charset="UTF-8"><title>MDviu</title>' +
-    '<style id="user-style"></style>' +
+    '<style id="user-style">' + UserCss + '</style>' +
     '<style id="hljs-light-theme">' + HljsLightCss + '</style>' +
     '<style id="hljs-dark-theme">' + HljsDarkCss + '</style>' +
     '</head><body>' +
@@ -420,7 +502,10 @@ procedure TFormMain.EdgeBrowser1CreateWebViewCompleted(Sender: TCustomEdgeBrowse
   AResult: HResult);
 begin
   if Succeeded(AResult) then
-    BuildShellAndNavigate
+  begin
+    ApplyPageColors;
+    BuildShellAndNavigate;
+  end
   else
     ShowMessage('Nao foi possivel iniciar o WebView2 (erro ' + IntToHex(AResult, 8) + ').');
 end;
