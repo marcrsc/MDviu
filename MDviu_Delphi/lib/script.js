@@ -57,13 +57,18 @@ const md = window.markdownit({
 // primeira vira um paragrafo vazio forcado (so um espaco invisivel "&nbsp;",
 // pra nao depender de HTML cru/da caixa "HTML"). Nao mexe dentro de blocos de
 // codigo (```/~~~) — la, linha em branco e conteudo literal.
+// Quebras CRLF (Windows) viram LF antes, senao a regra nao acha a sequencia;
+// linha so com espacos/tabs conta como em branco (o Markdown ja trata assim).
 function expandBlankLines(text) {
     const FENCE_RE = /(^ {0,3}(?:`{3,}|~{3,}).*$[\s\S]*?^ {0,3}(?:`{3,}|~{3,})[ \t]*$)/gm;
     return text
+        .replace(/\r\n?/g, "\n")
         .split(FENCE_RE)
         .map((part, i) => {
             if (i % 2 === 1) return part; // bloco de codigo capturado — nao mexe
-            return part.replace(/\n{3,}/g, (match) => "\n\n" + "&nbsp;\n\n".repeat(match.length - 2));
+            return part
+                .replace(/^[ \t]+$/gm, "")
+                .replace(/\n{3,}/g, (match) => "\n\n" + "&nbsp;\n\n".repeat(match.length - 2));
         })
         .join("");
 }

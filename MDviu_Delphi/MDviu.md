@@ -236,7 +236,10 @@ por varias linhas em branco):
   cada uma a mais soma espaco visivel. Implementado em
   `expandBlankLines()` (`script.js`), que preserva o conteudo de blocos de
   codigo (` ``` `/`~~~`) sem mexer — linha em branco la dentro continua
-  sendo so conteudo literal do codigo.
+  sendo so conteudo literal do codigo. Antes de contar, CRLF vira LF
+  (arquivos salvos no Windows) e linha so com espacos/tabs conta como em
+  branco — sem isso a regra nao funcionava em arquivo CRLF (bug corrigido;
+  os arquivos de `testes/` sao LF e nao mostravam o problema).
 
 ## Imagens
 
