@@ -70,11 +70,19 @@ descrito em [Arquitetura](#arquitetura).
 
 Projeto Delphi VCL padrao, como feito pela IDE:
 
-- **Interface no Form Designer** (`uMain.dfm`): painel, label, combo, os 6
-  `TSpeedButton`, os 2 checkboxes, `TEdgeBrowser`, `TOpenDialog` e
-  `TActionList` (com os atalhos de teclado) sao todos componentes de tempo
-  de projeto, com os eventos ligados no proprio `.dfm`. Nada visual e
-  criado em codigo — da pra abrir e editar a tela normalmente na IDE.
+- **Interface no Form Designer** (`uMain.dfm`): painel, label "Estilo",
+  combo, os 6 `TSpeedButton`, os 2 checkboxes, `TEdgeBrowser`,
+  `TOpenDialog` e `TActionList` (com os atalhos de teclado) sao todos
+  componentes de tempo de projeto, com os eventos ligados no proprio
+  `.dfm`. Nada visual e criado em codigo — da pra abrir e editar a tela
+  normalmente na IDE.
+  - Cada checkbox ("Nova janela", "HTML") e so a caixinha (`TCheckBox` sem
+    texto) + um `TLabel` ao lado com o texto: com fonte menor que a dos
+    botoes, o texto do proprio `TCheckBox` desalinhava da caixa. Clicar no
+    texto marca/desmarca a caixa (`LblCheckClick`).
+  - `ActiveControl = EdgeBrowser1` no form: o foco ja comeca na area do
+    documento (senao a combo "Estilo", primeira na ordem de Tab, aparecia
+    selecionada em azul ate o documento renderizar).
 - **Icone e estilo VCL configurados no projeto** (`MDviu.dproj`):
   `Icon_MainIcon` = `mdviu.ico` (Project Options > Application > Icon) e
   `Custom_Styles` = Onyx Blue (Project Options > Application > Appearance,
@@ -146,7 +154,12 @@ secao) — desmarcada por padrao. A caixa "HTML" libera HTML cru no arquivo
 atual (ver [Destaque de texto](#destaque-de-texto) e a nota de seguranca
 logo abaixo) — tambem desmarcada por padrao, e volta a desmarcar sozinha
 toda vez que um arquivo diferente e aberto (Abrir, arrastar, link pra
-outro `.md`, Voltar).
+outro `.md`, Voltar). Nas duas caixas, clicar no texto ao lado tambem
+marca/desmarca.
+
+O titulo da janela mostra `MDviu - <caminho completo do arquivo>`
+(definido em `RenderCurrentFile`); o mesmo texto aparece na dica da barra
+de tarefas do Windows.
 
 ## Como funcionam os links
 
