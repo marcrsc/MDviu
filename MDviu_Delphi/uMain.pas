@@ -76,6 +76,8 @@ type
     function ReadWebFile(const AFileName: string): string;
     procedure LaunchNewMDviuWindow(const AFilePath: string);
     procedure OpenRelatedMdFile(const AHref: string);
+    procedure OpenFile(const APath: string);
+    function DroppedFilePath(Args: TWebMessageReceivedEventArgs): string;
   public
   end;
 
@@ -445,16 +447,19 @@ begin
 end;
 
 // Mensagens vindas do script.js (window.chrome.webview.postMessage): clique
-// num link interno pra outro arquivo ("href") ou pedido de copiar um bloco
+// num link interno pra outro arquivo ("href"), pedido de copiar um bloco
 // de codigo pra area de transferencia ("copyText" — fallback de
 // copyCodeBlock() quando navigator.clipboard falha nessa origem "opaca" do
-// NavigateToString, ver comentario em lib\script.js).
+// NavigateToString, ver comentario em lib\script.js) ou arquivo arrastado
+// pra janela ("dropFile" — o arquivo vem junto como objeto adicional, ver
+// DroppedFilePath).
 procedure TFormMain.EdgeBrowser1WebMessageReceived(Sender: TCustomEdgeBrowser;
   Args: TWebMessageReceivedEventArgs);
 var
   MsgPtr: PWideChar;
   JsonVal: TJSONValue;
-  Href, CopyText: string;
+  Href, CopyText, DroppedPath: string;
+  IsDrop: Boolean;
 begin
   if Args.ArgsInterface.TryGetWebMessageAsString(MsgPtr) <> S_OK then
     Exit;
@@ -468,10 +473,59 @@ begin
     if TJSONObject(JsonVal).TryGetValue<string>('href', Href) then
       OpenRelatedMdFile(Href)
     else if TJSONObject(JsonVal).TryGetValue<string>('copyText', CopyText) then
-      Clipboard.AsText := CopyText;
+      Clipboard.AsText := CopyText
+    else if TJSONObject(JsonVal).TryGetValue<Boolean>('dropFile', IsDrop) and IsDrop then
+    begin
+      DroppedPath := DroppedFilePath(Args);
+      if DroppedPath <> '' then
+        OpenFile(DroppedPath);
+    end;
   finally
     JsonVal.Free;
   end;
+end;
+
+// Caminho completo do arquivo arrastado pra janela. O JS nao enxerga o
+// caminho (so nome/conteudo), mas o WebView2 entrega o File mandado por
+// postMessageWithAdditionalObjects como ICoreWebView2File, que tem o Path.
+// Vazio se o runtime do WebView2 for antigo demais pra isso ou nao vier arquivo.
+function TFormMain.DroppedFilePath(Args: TWebMessageReceivedEventArgs): string;
+var
+  Args2: ICoreWebView2WebMessageReceivedEventArgs2;
+  Objects: ICoreWebView2ObjectCollectionView;
+  Count: SYSUINT;
+  Obj: IUnknown;
+  WebFile: ICoreWebView2File;
+  PathPtr: PWideChar;
+begin
+  Result := '';
+  if not Supports(Args.ArgsInterface, ICoreWebView2WebMessageReceivedEventArgs2, Args2) then
+    Exit;
+  if (Args2.Get_additionalObjects(Objects) <> S_OK) or (Objects = nil) then
+    Exit;
+  if (Objects.Get_Count(Count) <> S_OK) or (Count = 0) then
+    Exit;
+  if Objects.GetValueAtIndex(0, Obj) <> S_OK then
+    Exit;
+  if not Supports(Obj, ICoreWebView2File, WebFile) then
+    Exit;
+  if WebFile.Get_Path(PathPtr) = S_OK then
+  begin
+    Result := PathPtr;
+    CoTaskMemFree(PathPtr);
+  end;
+end;
+
+// Abre um arquivo na janela atual, empilhando o anterior pro "Voltar" — usado
+// pelo botao "Abrir..." e pelo arrastar-e-soltar.
+procedure TFormMain.OpenFile(const APath: string);
+begin
+  if FCurrentMDPath <> '' then
+    FHistory.Add(FCurrentMDPath);
+  FCurrentMDPath := APath;
+  FPendingAnchor := '';
+  ChkHtml.Checked := False; // HTML cru reseta a cada arquivo novo (seguranca)
+  RenderCurrentFile;
 end;
 
 // Resolve um link relativo pra outro .md (relativo a pasta do arquivo atual) e
@@ -603,11 +657,7 @@ begin
   if not OpenDialog1.Execute(Handle) then
     Exit;
 
-  if FCurrentMDPath <> '' then
-    FHistory.Add(FCurrentMDPath);
-  FCurrentMDPath := OpenDialog1.FileName;
-  ChkHtml.Checked := False; // HTML cru reseta a cada arquivo novo (seguranca)
-  RenderCurrentFile;
+  OpenFile(OpenDialog1.FileName);
 end;
 
 end.

@@ -342,10 +342,11 @@ editar, salvar e apertar F5 no MDviu mostra o resultado na hora.
 
 ## Limitacoes conhecidas
 
-- **Arrastar um arquivo pra janela nao funciona** (desativado de proposito):
-  o navegador nao entrega o caminho real do arquivo arrastado pro Delphi,
-  entao o F5 depois nao conseguiria relê-lo do disco. Use duplo clique ou
-  o botao "Abrir...".
+- **Arrastar arquivo pra janela** abre igual ao "Abrir..." (so o primeiro,
+  se vierem varios). O JS nao ve o caminho real; `script.js` manda o `File`
+  por `postMessageWithAdditionalObjects` e o Delphi le o caminho do
+  `ICoreWebView2File` (`DroppedFilePath` em `uMain.pas`). Exige WebView2
+  Runtime recente; em runtime antigo, soltar o arquivo nao faz nada.
 - Exportar PDF so tem os dois caminhos ja prontos (dialogo Ctrl+P e
   automatico Ctrl+Shift+P) — sem conversao em lote ainda.
 

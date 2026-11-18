@@ -370,11 +370,22 @@ function setStyle(css) {
     document.getElementById("hljs-dark-theme").disabled = !isDark;
 }
 
-// Arrastar um arquivo nao e suportado (desativado de proposito: o F5 depois
-// nao conseguiria relê-lo do disco, so o duplo clique/botao "Abrir..." sabem
-// o caminho real). So evita que o navegador tente navegar pro arquivo solto.
+// Arrastar um arquivo pra janela: o preventDefault evita que o navegador
+// navegue pro arquivo solto (sairia do MDviu). O caminho real nao e visivel
+// pro JS (objeto File so tem nome/conteudo), entao o arquivo vai pro Delphi
+// via postMessageWithAdditionalObjects — la ele chega como ICoreWebView2File,
+// que tem o caminho completo, e abre igual ao botao "Abrir...". So o primeiro
+// arquivo, se vierem varios.
 window.addEventListener("dragover", (e) => e.preventDefault());
-window.addEventListener("drop", (e) => e.preventDefault());
+window.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const files = e.dataTransfer && e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+    if (window.chrome && window.chrome.webview && window.chrome.webview.postMessageWithAdditionalObjects) {
+        window.chrome.webview.postMessageWithAdditionalObjects(
+            JSON.stringify({ dropFile: true }), [files[0]]);
+    }
+});
 
 // Link interno pra OUTRO arquivo .md (ex.: "[veja](outro.md)"): intercepta o
 // clique e avisa o Delphi, que resolve o caminho e decide mesma janela ou nova
