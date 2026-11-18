@@ -189,6 +189,24 @@ mark {
 }
 
 /* -------------------------------------------------------------------------
+   8.1 CITACOES (linhas comecando com ">" no markdown)
+   Barra azul a esquerda (azul mais claro, pra aparecer no fundo escuro),
+   fundo levemente azulado e texto um pouco mais apagado. Citacao dentro de
+   citacao (">>") ganha uma barra dentro da outra automaticamente.
+   ------------------------------------------------------------------------- */
+blockquote {
+    margin: 0 0 1.4em 0;
+    padding: 0.5em 1em;
+    border-left: 4px solid #5a9cf0;
+    background-color: #252a33;
+    color: #b8b8b8;
+}
+
+blockquote > :last-child {
+    margin-bottom: 0;
+}
+
+/* -------------------------------------------------------------------------
    9. REGUA HORIZONTAL (<hr>, "---" no markdown)
    Mais grossa que a linha sob o h1 (secao 2) de proposito — e o separador
    usado pra marcar visualmente a quebra entre secoes, tem que aparecer bem.
