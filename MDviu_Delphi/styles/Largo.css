@@ -1,9 +1,7 @@
 /* =========================================================================
-   MDviu — folha de estilo "Claro_DEF"
-   O sufixo "_DEF" marca este como o estilo padrao (selecionado ao abrir,
-   antes de voce escolher outro na caixinha "Estilo" no topo do programa).
-   Para trocar o default, renomeie o "_DEF" para outro arquivo .css desta
-   pasta (so um arquivo deve ter o sufixo por vez).
+   MDviu — folha de estilo "Largo"
+   Igual ao "Claro", mas sem largura maxima: o texto ocupa a janela toda
+   (sem o max-width do body).
 
    Cada secao abaixo controla UM elemento. Edite os valores, salve, e
    aperte F5 na janela do MDviu para ver o resultado (rele o .md e o
