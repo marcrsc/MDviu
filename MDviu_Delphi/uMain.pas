@@ -138,7 +138,7 @@ end;
 function LanguageForExtension(const AExt: string): string;
 const
   // Pares (extensao, linguagem do highlight.js).
-  ExtLang: array[0..41, 0..1] of string = (
+  ExtLang: array[0..42, 0..1] of string = (
     // Delphi
     ('.pas', 'delphi'), ('.dpr', 'delphi'), ('.dfm', 'delphi'), ('.dpk', 'delphi'),
     ('.inc', 'delphi'),
@@ -152,7 +152,7 @@ const
     ('.toml', 'ini'), ('.sql', 'sql'),
     // Scripts
     ('.bat', 'dos'), ('.cmd', 'dos'), ('.ps1', 'powershell'), ('.sh', 'bash'),
-    ('.py', 'python'), ('.vbs', 'vbscript'),
+    ('.py', 'python'), ('.pyw', 'python'), ('.vbs', 'vbscript'),
     // Outras linguagens
     ('.vb', 'vbnet'), ('.cs', 'csharp'), ('.java', 'java'), ('.cpp', 'cpp'),
     ('.h', 'cpp'),

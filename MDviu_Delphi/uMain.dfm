@@ -235,9 +235,9 @@ object FormMain: TFormMain
       'Arquivos Markdown|*.md|Codigo-fonte e texto|*.pas;*.dpr;*.dfm;*.' +
       'dpk;*.inc;*.html;*.htm;*.js;*.ts;*.css;*.php;*.asp;*.json;*.xml;' +
       '*.dproj;*.groupproj;*.config;*.manifest;*.svg;*.xsd;*.xsl;*.yml;' +
-      '*.yaml;*.ini;*.toml;*.sql;*.bat;*.cmd;*.ps1;*.sh;*.py;*.vbs;*.vb' +
-      ';*.cs;*.java;*.cpp;*.h;*.txt;*.log;*.csv;*.diff;*.patch|Todos os' +
-      ' arquivos|*.*'
+      '*.yaml;*.ini;*.toml;*.sql;*.bat;*.cmd;*.ps1;*.sh;*.py;*.pyw;*.vb' +
+      's;*.vb;*.cs;*.java;*.cpp;*.h;*.txt;*.log;*.csv;*.diff;*.patch|To' +
+      'dos os arquivos|*.*'
     Title = 'Abrir arquivo Markdown'
     Left = 120
     Top = 72

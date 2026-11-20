@@ -334,6 +334,7 @@ decide isso pela extensao do arquivo, nao importa como foi aberto:
 | `.ps1` | PowerShell |
 | `.sh` | Bash |
 | `.py` | Python |
+| `.pyw` | Python |
 | `.vbs` | VBScript |
 | `.vb` | VB.NET |
 | `.cs` | C# |
