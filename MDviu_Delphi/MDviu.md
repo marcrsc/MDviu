@@ -298,7 +298,10 @@ build completo — todas as linguagens da lib, inclusive `delphi`/`pascal` e
     vermelho escuro no claro, roxo claro no escuro).
   - Comentario (`.hljs-comment`): vermelho puro em negrito nos dois temas
     (era cinza).
-  - Numero e string (`.hljs-number`, `.hljs-string`): roxo nos dois temas.
+  - Numero (`.hljs-number`) e string (`.hljs-string`): roxo nos dois temas;
+    string tambem em negrito (era so cor, igual o numero) — engloba string
+    de aspas triplas do Python (`"""..."""`), que o highlight.js classifica
+    como `.hljs-string` normal, sem token proprio de docstring.
   - Resto dos tokens (operador, atributo, tipo, etc.) continua como veio da
     lib.
 - **Quebra de linha longa**: por padrao o bloco de codigo rola pro lado
