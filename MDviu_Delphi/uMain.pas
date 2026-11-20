@@ -30,8 +30,10 @@ type
     BtnExportPdf: TSpeedButton;
     ChkNewWindow: TCheckBox;
     ChkHtml: TCheckBox;
+    ChkWrap: TCheckBox;
     LblNewWindow: TLabel;
     LblHtml: TLabel;
+    LblWrap: TLabel;
     EdgeBrowser1: TEdgeBrowser;
     ActionList1: TActionList;
     ActOpen: TAction;
@@ -45,6 +47,7 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure ComboStylesChange(Sender: TObject);
     procedure ChkHtmlClick(Sender: TObject);
+    procedure ChkWrapClick(Sender: TObject);
     procedure LblCheckClick(Sender: TObject);
     procedure EdgeBrowser1CreateWebViewCompleted(Sender: TCustomEdgeBrowser; AResult: HResult);
     procedure EdgeBrowser1NavigationCompleted(Sender: TCustomEdgeBrowser; IsSuccess: Boolean;
@@ -373,6 +376,14 @@ begin
   RenderCurrentFile; // so re-renderiza o arquivo atual com o novo estado do HTML cru
 end;
 
+// Checkbox "Quebra" (desligada por padrao): so troca uma classe no <body> via
+// JS (ver script.js/setCodeWrap) — nao precisa re-renderizar o arquivo, a
+// classe sobrevive sozinha a troca de estilo e a abertura de outro arquivo.
+procedure TFormMain.ChkWrapClick(Sender: TObject);
+begin
+  EdgeBrowser1.ExecuteScript('setCodeWrap(' + IfThen(ChkWrap.Checked, 'true', 'false') + ');');
+end;
+
 // Os checkboxes da barra sao so a caixinha; o texto e um TLabel ao lado (com
 // fonte menor, o texto do proprio TCheckBox desalinhava da caixa). Clicar no
 // texto marca/desmarca a caixa, como no checkbox comum (o OnClick dela roda).
@@ -381,7 +392,9 @@ begin
   if Sender = LblNewWindow then
     ChkNewWindow.Checked := not ChkNewWindow.Checked
   else if Sender = LblHtml then
-    ChkHtml.Checked := not ChkHtml.Checked;
+    ChkHtml.Checked := not ChkHtml.Checked
+  else if Sender = LblWrap then
+    ChkWrap.Checked := not ChkWrap.Checked;
 end;
 
 function TFormMain.ReadWebFile(const AFileName: string): string;

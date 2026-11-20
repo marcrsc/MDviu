@@ -391,6 +391,15 @@ function setStyle(css) {
     document.getElementById("hljs-dark-theme").disabled = !isDark;
 }
 
+// Checkbox "Quebra" (desligada por padrao): liga/desliga quebra de linha
+// dentro dos blocos de codigo (ver regra "body.wrap-code pre" em cada CSS de
+// estilo). So troca uma classe no <body> — sobrevive a troca de estilo
+// (setStyle so troca o <style>) e a abertura de outro arquivo (nenhum dos
+// dois recarrega a pagina; so BuildShellAndNavigate faz isso, uma vez so).
+function setCodeWrap(enabled) {
+    document.body.classList.toggle("wrap-code", enabled);
+}
+
 // Arrastar um arquivo pra janela: o preventDefault evita que o navegador
 // navegue pro arquivo solto (sairia do MDviu). O caminho real nao e visivel
 // pro JS (objeto File so tem nome/conteudo), entao o arquivo vai pro Delphi

@@ -173,6 +173,15 @@ pre code {
     padding: 0;
 }
 
+/* Checkbox "Quebra" na barra (desligada por padrao, script.js/setCodeWrap):
+   em vez de rolar pro lado (overflow-x acima), a linha longa quebra dentro
+   da caixa. "anywhere" cobre tambem uma palavra unica sem espaco (link,
+   hash) que sozinha seria mais larga que a caixa. */
+body.wrap-code pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
 code {
     font-family: Consolas, "Courier New", monospace;
     background-color: #f0f0ff;

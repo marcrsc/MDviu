@@ -76,7 +76,7 @@ Projeto Delphi VCL padrao, como feito pela IDE:
   componentes de tempo de projeto, com os eventos ligados no proprio
   `.dfm`. Nada visual e criado em codigo — da pra abrir e editar a tela
   normalmente na IDE.
-  - Cada checkbox ("Nova janela", "HTML") e so a caixinha (`TCheckBox` sem
+  - Cada checkbox ("Janela", "HTML", "Quebra") e so a caixinha (`TCheckBox` sem
     texto) + um `TLabel` ao lado com o texto: com fonte menor que a dos
     botoes, o texto do proprio `TCheckBox` desalinhava da caixa. Clicar no
     texto marca/desmarca a caixa (`LblCheckClick`).
@@ -148,14 +148,21 @@ bloco** (paragrafo, titulo, tabela etc.) esta encostado no topo da tela e
 rola ate esse mesmo bloco depois de re-renderizar — funciona porque o
 texto nao muda, so o CSS, entao a ordem dos blocos e sempre identica.
 
-A combo "Estilo" lista os arquivos de `styles\*.css`. A caixa "Nova
-janela" controla o comportamento dos links pra outro `.md` (ver proxima
+A combo "Estilo" lista os arquivos de `styles\*.css`. A caixa "Janela"
+controla o comportamento dos links pra outro `.md` (ver proxima
 secao) — desmarcada por padrao. A caixa "HTML" libera HTML cru no arquivo
 atual (ver [Destaque de texto](#destaque-de-texto) e a nota de seguranca
 logo abaixo) — tambem desmarcada por padrao, e volta a desmarcar sozinha
 toda vez que um arquivo diferente e aberto (Abrir, arrastar, link pra
-outro `.md`, Voltar). Nas duas caixas, clicar no texto ao lado tambem
-marca/desmarca.
+outro `.md`, Voltar). A caixa "Quebra" (ver
+[Destaque de sintaxe em blocos de codigo](#destaque-de-sintaxe-em-blocos-de-codigo))
+quebra as linhas longas dentro dos blocos de codigo em vez de rolar pro
+lado — tambem desmarcada por padrao, mas nao reseta ao trocar de arquivo
+(so e aparencia, nao tem nada de seguranca envolvido). Nas tres caixas,
+clicar no texto ao lado tambem marca/desmarca.
+
+Todo botao e caixa da barra tem dica (`Hint`/`ShowHint` no `.dfm`) — passe
+o mouse por cima pra ver uma frase do que ele faz.
 
 O titulo da janela mostra `MDviu - <caminho completo do arquivo>`
 (definido em `RenderCurrentFile`); o mesmo texto aparece na dica da barra
@@ -171,7 +178,7 @@ de tarefas do Windows.
   `window.chrome.webview.postMessage`. O Delphi resolve o caminho relativo
   a pasta do arquivo atual e abre — na mesma janela (empilhando o arquivo
   atual pro botao "Voltar") ou numa janela nova do MDviu, conforme a caixa
-  "Nova janela". Nao faz distincao de extensao: um link pra um arquivo de
+  "Janela". Nao faz distincao de extensao: um link pra um arquivo de
   codigo-fonte (`.pas`, `.py` etc.) abre com highlight em vez de Markdown —
   ver [Abrir codigo fonte direto](#abrir-codigo-fonte-direto).
 - **Link combinando arquivo + ancora** (`[texto](outro.md#secao)`): o
@@ -180,7 +187,7 @@ de tarefas do Windows.
   chamado literalmente `outro.md#secao` e falhar com "arquivo nao
   encontrado". Depois de abrir `outro.md`, rola ate o titulo com aquele id
   (`FPendingAnchor`, usado tanto ao trocar de arquivo na mesma janela quanto
-  ao abrir pela linha de comando/"Nova janela").
+  ao abrir pela linha de comando/"Janela").
 - **Link externo** (`http://`, `https://`, `mailto:`): sempre abre no
   navegador padrao do Windows (`ShellExecute`), nunca dentro do MDviu — o
   WebView2 sinaliza isso via `NewWindowRequested`, que o Delphi sempre
@@ -294,6 +301,14 @@ build completo — todas as linguagens da lib, inclusive `delphi`/`pascal` e
   - Numero e string (`.hljs-number`, `.hljs-string`): roxo nos dois temas.
   - Resto dos tokens (operador, atributo, tipo, etc.) continua como veio da
     lib.
+- **Quebra de linha longa**: por padrao o bloco de codigo rola pro lado
+  (`overflow-x`) em vez de quebrar, pra nao desalinhar indentacao/colunas.
+  A caixa "Quebra" na barra (desmarcada por padrao) troca pra `white-space:
+  pre-wrap` + `overflow-wrap: anywhere` (regra `body.wrap-code pre` em cada
+  CSS de `styles\`) — so acrescenta uma classe no `<body>` via JS
+  (`setCodeWrap()` em `script.js`), sem re-renderizar nada; por isso
+  sobrevive a troca de estilo e a abertura de outro arquivo na mesma
+  janela (só fecha a janela zera, igual os outros dois checkboxes).
 
 ## Abrir codigo fonte direto
 
@@ -313,7 +328,7 @@ decide isso pela extensao do arquivo, nao importa como foi aberto:
   nao faz distincao de extensao — qualquer link local cai no mesmo
   `RenderCurrentFile` que decide o highlight, entao um link pra `.pas` ja
   abre com highlight sem precisar de nada a mais.
-- **Linha de comando** (duplo clique, "Nova janela"): mesma coisa, `FormCreate`
+- **Linha de comando** (duplo clique, "Janela"): mesma coisa, `FormCreate`
   nao faz distincao, qualquer extensao reconhecida funciona.
 
 | Extensao | Linguagem (highlight.js) |
