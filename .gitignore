@@ -21,9 +21,8 @@ mdviu_debug.log
 /testes/*.pdf
 
 # Backup local do repositorio inteiro (fica so no Dropbox, nunca no GitHub)
-/BAK/
+/BAK*/
 
-# Pasta criada por algum software local (antivirus/backup?), nome com o
-# computador (AP01) -- nao e nada do projeto
-/ANT_AP01/
-/ANT/
+# Pasta criada por algum software local (antivirus/backup?), as vezes com
+# o nome do computador (ex.: ANT_AP01) -- nao e nada do projeto
+/ANT*/
