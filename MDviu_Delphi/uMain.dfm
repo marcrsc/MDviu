@@ -31,12 +31,14 @@ object FormMain: TFormMain
       Caption = 'Estilo'
     end
     object LblWrap: TLabel
-      Left = 722
+      Left = 702
       Top = 9
-      Width = 40
+      Width = 38
       Height = 13
       Cursor = crHandPoint
-      Hint = 'Quebra as linhas longas dentro dos blocos de codigo, em vez de rolar para o lado.'
+      Hint = 
+        'Quebra as linhas longas dentro dos blocos de codigo, em vez de r' +
+        'olar para o lado.'
       Caption = 'Quebra'
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
@@ -49,12 +51,14 @@ object FormMain: TFormMain
       OnClick = LblCheckClick
     end
     object LblNewWindow: TLabel
-      Left = 798
+      Left = 778
       Top = 9
-      Width = 34
+      Width = 32
       Height = 13
       Cursor = crHandPoint
-      Hint = 'Abre os links deste arquivo numa janela nova do MDviu, em vez de navegar nesta.'
+      Hint = 
+        'Abre os links deste arquivo numa janela nova do MDviu, em vez de' +
+        ' navegar nesta.'
       Caption = 'Janela'
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
@@ -67,12 +71,14 @@ object FormMain: TFormMain
       OnClick = LblCheckClick
     end
     object LblHtml: TLabel
-      Left = 868
+      Left = 848
       Top = 9
       Width = 28
       Height = 13
       Cursor = crHandPoint
-      Hint = 'Permite HTML bruto neste arquivo; desliga sozinha ao abrir outro, por seguranca.'
+      Hint = 
+        'Permite HTML bruto neste arquivo; desliga sozinha ao abrir outro' +
+        ', por seguranca.'
       Caption = 'HTML'
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
@@ -85,8 +91,8 @@ object FormMain: TFormMain
       OnClick = LblCheckClick
     end
     object BtnOpen: TSpeedButton
-      Left = 224
-      Top = 4
+      Left = 204
+      Top = 3
       Width = 72
       Height = 24
       Hint = 'Abre outro arquivo (Ctrl+O).'
@@ -104,11 +110,13 @@ object FormMain: TFormMain
       OnClick = ActOpenExecute
     end
     object BtnBack: TSpeedButton
-      Left = 302
-      Top = 4
+      Left = 282
+      Top = 3
       Width = 72
       Height = 24
-      Hint = 'Volta ao arquivo anterior, na mesma posicao de rolagem (Alt+Backspace).'
+      Hint = 
+        'Volta ao arquivo anterior, na mesma posicao de rolagem (Alt+Back' +
+        'space).'
       Caption = 'Voltar'
       Flat = True
       Font.Charset = DEFAULT_CHARSET
@@ -123,8 +131,8 @@ object FormMain: TFormMain
       OnClick = ActBackExecute
     end
     object BtnScrollTop: TSpeedButton
-      Left = 380
-      Top = 4
+      Left = 360
+      Top = 3
       Width = 72
       Height = 24
       Hint = 'Rola ate o topo do arquivo atual.'
@@ -142,8 +150,8 @@ object FormMain: TFormMain
       OnClick = ActScrollTopExecute
     end
     object BtnReload: TSpeedButton
-      Left = 458
-      Top = 4
+      Left = 438
+      Top = 3
       Width = 72
       Height = 24
       Hint = 'Recarrega o arquivo atual do disco (F5).'
@@ -161,8 +169,8 @@ object FormMain: TFormMain
       OnClick = ActReloadExecute
     end
     object BtnPrint: TSpeedButton
-      Left = 536
-      Top = 4
+      Left = 516
+      Top = 3
       Width = 72
       Height = 24
       Hint = 'Abre a impressao nativa do WebView2 (Ctrl+P).'
@@ -180,12 +188,14 @@ object FormMain: TFormMain
       OnClick = ActPrintExecute
     end
     object BtnExportPdf: TSpeedButton
-      Left = 614
-      Top = 4
+      Left = 594
+      Top = 3
       Width = 72
       Height = 24
-      Hint = 'Salva o arquivo atual como PDF, avisando antes de substituir (Ctrl+Shift+P).'
-      Caption = 'Salvar PDF'
+      Hint = 
+        'Salva o arquivo atual como PDF, avisando antes de substituir (Ct' +
+        'rl+Shift+P).'
+      Caption = 'PDF'
       Flat = True
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWhite
@@ -201,7 +211,7 @@ object FormMain: TFormMain
     object ComboStyles: TComboBox
       Left = 41
       Top = 5
-      Width = 160
+      Width = 150
       Height = 23
       Hint = 'Escolhe o estilo visual da pagina: cores, largura e espacamento.'
       Style = csDropDownList
@@ -211,32 +221,38 @@ object FormMain: TFormMain
       OnChange = ComboStylesChange
     end
     object ChkWrap: TCheckBox
-      Left = 702
+      Left = 682
       Top = 9
       Width = 17
       Height = 17
-      Hint = 'Quebra as linhas longas dentro dos blocos de codigo, em vez de rolar para o lado.'
+      Hint = 
+        'Quebra as linhas longas dentro dos blocos de codigo, em vez de r' +
+        'olar para o lado.'
       ParentShowHint = False
       ShowHint = True
       TabOrder = 1
       OnClick = ChkWrapClick
     end
     object ChkNewWindow: TCheckBox
-      Left = 778
+      Left = 758
       Top = 9
       Width = 17
       Height = 17
-      Hint = 'Abre os links deste arquivo numa janela nova do MDviu, em vez de navegar nesta.'
+      Hint = 
+        'Abre os links deste arquivo numa janela nova do MDviu, em vez de' +
+        ' navegar nesta.'
       ParentShowHint = False
       ShowHint = True
       TabOrder = 2
     end
     object ChkHtml: TCheckBox
-      Left = 848
+      Left = 828
       Top = 9
       Width = 17
       Height = 17
-      Hint = 'Permite HTML bruto neste arquivo; desliga sozinha ao abrir outro, por seguranca.'
+      Hint = 
+        'Permite HTML bruto neste arquivo; desliga sozinha ao abrir outro' +
+        ', por seguranca.'
       ParentShowHint = False
       ShowHint = True
       TabOrder = 3
